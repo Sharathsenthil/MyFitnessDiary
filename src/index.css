@@ -242,8 +242,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 2rem;
-  padding: 1rem 0;
+  gap: 1.5rem;
+  padding: 0.25rem 0;
   text-align: center;
 }
 .goal-label { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.2rem; }

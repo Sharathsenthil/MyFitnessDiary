@@ -428,36 +428,38 @@ function ReportTab() {
 
       {/* ── 7. Weight Management Goal ── */}
       <Section title="Weight Management Goals" icon={<Target size={18} color="var(--warning)" />}>
-        <div className="goal-grid">
-          <div className="goal-current">
-            <div className="goal-label">Current Weight</div>
-            <div className="goal-num">{bodyComponent.weight.value} <span>KG</span></div>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1.5rem', padding: '0.5rem 0' }}>
+          
+          {/* Current vs Target Weight */}
+          <div className="goal-grid" style={{ margin: 0, padding: 0, gap: '1rem' }}>
+            <div className="goal-current">
+              <div className="goal-label">Current Weight</div>
+              <div className="goal-num" style={{ fontSize: '1.6rem' }}>{bodyComponent.weight.value} <span>KG</span></div>
+            </div>
+            <div className="goal-arrow" style={{ fontSize: '1.4rem' }}>➜</div>
+            <div className="goal-target">
+              <div className="goal-label">Target Weight</div>
+              <div className="goal-num gradient-text" style={{ fontSize: '1.6rem' }}>{weightManagement.targetWeight} <span>KG</span></div>
+            </div>
           </div>
-          <div className="goal-arrow">➜</div>
-          <div className="goal-target">
-            <div className="goal-label">Target Weight</div>
-            <div className="goal-num gradient-text">{weightManagement.targetWeight} <span>KG</span></div>
+
+          {/* Actionable Metrics */}
+          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', textAlign: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>⚖️ Weight to Lose</div>
+              <div style={{ color: 'var(--warning)', fontWeight: 600, fontSize: '1rem' }}>{weightManagement.weightControl} KG</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>🥓 Fat to Reduce</div>
+              <div style={{ color: 'var(--warning)', fontWeight: 600, fontSize: '1rem' }}>{weightManagement.fatControl} KG</div>
+            </div>
+            <div>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>💪 Muscle to Gain</div>
+              <div style={{ color: 'var(--success)', fontWeight: 600, fontSize: '1rem' }}>+{weightManagement.muscleControl} KG</div>
+            </div>
           </div>
+
         </div>
-        <table className="data-table" style={{ marginTop: '1rem' }}>
-          <tbody>
-            <tr className="metric-row">
-              <td>⚖️ Weight to Lose</td>
-              <td className="metric-value" style={{ color: 'var(--warning)' }}>{weightManagement.weightControl} KG</td>
-              <td colSpan={2} />
-            </tr>
-            <tr className="metric-row">
-              <td>🥓 Fat to Reduce</td>
-              <td className="metric-value" style={{ color: 'var(--warning)' }}>{weightManagement.fatControl} KG</td>
-              <td colSpan={2} />
-            </tr>
-            <tr className="metric-row">
-              <td>💪 Muscle to Gain</td>
-              <td className="metric-value" style={{ color: 'var(--success)' }}>+{weightManagement.muscleControl} KG</td>
-              <td colSpan={2} />
-            </tr>
-          </tbody>
-        </table>
       </Section>
 
       {/* ── 8. Progress Chart ── */}

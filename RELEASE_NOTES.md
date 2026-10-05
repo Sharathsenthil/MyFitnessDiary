@@ -10,6 +10,7 @@
   - Added **Edema & Water Analysis Panel**: Added tracking for Body Water Percent, Intracellular Water, Extracellular Water, and overall Edema Status/Index.
 - **Emoji Integration**: Enriched the UI by adding contextual emojis across all sections (e.g., 🥩 for Protein, 💧 for Water, 🥓 for Fat, 💪 for Muscle) to improve visual scanning and create a friendlier interface.
 - **Improved Chart Labels**: The Body Composition pie chart and Progress Overview line chart legends now include emojis.
+- **UI Polish**: Redesigned the "Weight Management Goals" section into a highly compact, inline flex layout to drastically reduce vertical whitespace and improve data density.
 
 ### 🔧 Technical Changes
-- **`src/App.tsx`**: Completely refactored the `ReportTab` component to include the new `StatCard` grids and custom glass-panels for Segmental and Edema analysis. Extracted and mapped new fields from the `fitnessData` import.
+- **`src/App.tsx` & `src/index.css`**: Completely refactored the `ReportTab` component to include the new `StatCard` grids and custom glass-panels for Segmental and Edema analysis. Extracted and mapped new fields from the `fitnessData` import. Redesigned the layout for the Weight Management goals section.
