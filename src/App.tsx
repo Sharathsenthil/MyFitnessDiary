@@ -187,10 +187,21 @@ function ReportTab() {
   const [profileForm, setProfileForm] = useState(userProfile);
   const [chartFilter, setChartFilter] = useState<'last10' | 'all'>('all');
 
-  const handleProfileSave = (e: React.FormEvent) => {
+  const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setUserProfile(profileForm);
     setIsEditingProfile(false);
+    
+    // Save to the new MongoDB backend
+    try {
+      await fetch('http://localhost:5000/api/fitness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ personalInfo: profileForm })
+      });
+    } catch(err) {
+      console.error('Failed to save to MongoDB backend:', err);
+    }
   };
 
   const exportData = () => {
