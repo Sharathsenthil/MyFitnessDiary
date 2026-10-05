@@ -24,6 +24,7 @@ const fitnessSchema = new mongoose.Schema({
   edemaAnalysis: Object,
   weightManagement: Object,
   bodyType: String,
+  progressData: [Object],
   updatedAt: { type: Date, default: Date.now }
 });
 
