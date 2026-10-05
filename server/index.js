@@ -61,6 +61,16 @@ app.post('/api/fitness', async (req, res) => {
   }
 });
 
+const path = require('path');
+// Serve static frontend files from the React build (../dist)
+const distPath = path.join(__dirname, '../dist');
+app.use(express.static(distPath));
+
+// Catch-all route to serve the React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
