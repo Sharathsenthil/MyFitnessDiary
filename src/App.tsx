@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useState, useEffect, type FormEvent } from 'react';
 import {
   Activity, Scale, Dumbbell, Flame, Target, User,
   LayoutDashboard, FileText, CalendarCheck, TrendingUp,
@@ -186,6 +186,18 @@ function ReportTab() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState(userProfile);
   const [chartFilter, setChartFilter] = useState<'last10' | 'all'>('all');
+
+  useEffect(() => {
+    fetch('/api/fitness')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.personalInfo) {
+          setUserProfile(data.personalInfo);
+          setProfileForm(data.personalInfo);
+        }
+      })
+      .catch(err => console.error('Error fetching data:', err));
+  }, []);
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
