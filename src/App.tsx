@@ -192,9 +192,10 @@ function ReportTab() {
     setUserProfile(profileForm);
     setIsEditingProfile(false);
     
-    // Save to the new MongoDB backend
+    // Save to the MongoDB backend (Render or Local)
     try {
-      await fetch('http://localhost:5000/api/fitness', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+      await fetch(`${apiUrl}/api/fitness`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ personalInfo: profileForm })
