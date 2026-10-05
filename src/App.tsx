@@ -1,7 +1,7 @@
-import { useState, FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import {
   Activity, Scale, Dumbbell, Flame, Target, User,
-  CalendarDays, LayoutDashboard, FileText, CalendarCheck, TrendingUp,
+  LayoutDashboard, FileText, CalendarCheck, TrendingUp,
   PieChart as PieChartIcon, Droplets, ChevronDown, ChevronUp, Plus,
   Menu, Moon, Sun, GitCompare
 } from 'lucide-react';
@@ -41,19 +41,6 @@ function statusInfo(value: number, min?: number, max?: number, isHighBad = false
   return { label: 'Normal ✓', color: 'var(--success)', badge: 'badge-success' };
 }
 
-function ProgressBar({ value, min, max, isHighBad = false }: { value: number, min?: number, max?: number, isHighBad?: boolean }) {
-  let percent = max ? Math.min((value / (max * 1.2)) * 100, 100) : 70;
-  let color = 'var(--accent)';
-  if (max) {
-    if (value > max) color = isHighBad ? 'var(--warning)' : 'var(--success)';
-    else if (min && value < min) color = 'var(--warning)';
-  }
-  return (
-    <div className="progress-container">
-      <div className="progress-bar" style={{ width: `${percent}%`, background: color }} />
-    </div>
-  );
-}
 
 /* ─── Metric Row (used inside grouped tables) ────────── */
 function MetricRow({ label, value, unit, min, max, isHighBad = false, tooltip = '' }: {
