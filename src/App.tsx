@@ -1,4 +1,6 @@
 import { useState, useEffect, type FormEvent } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import {
   Activity, Scale, Dumbbell, Flame, Target, User,
   LayoutDashboard, FileText, CalendarCheck, TrendingUp,
@@ -187,17 +189,7 @@ function ReportTab() {
   const [profileForm, setProfileForm] = useState(userProfile);
   const [chartFilter, setChartFilter] = useState<'last10' | 'all'>('all');
 
-  useEffect(() => {
-    fetch('/api/fitness')
-      .then(res => res.json())
-      .then(data => {
-        if (data && data.personalInfo) {
-          setUserProfile(data.personalInfo);
-          setProfileForm(data.personalInfo);
-        }
-      })
-      .catch(err => console.error('Error fetching data:', err));
-  }, []);
+
 
   const handleProfileSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -688,7 +680,7 @@ function NewReportTab() {
 
   const set = (k: string, v: string) => setForm((f: any) => ({ ...f, [k]: v }));
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     const newData: any = { ...form };
     Object.keys(newData).forEach(k => {
@@ -697,6 +689,18 @@ function NewReportTab() {
     const updatedData = [...progressData.filter((d: any) => d.date !== form.date), newData]
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
     setProgressData(updatedData);
+
+    // Save progress to MongoDB
+    try {
+      await fetch('/api/fitness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ progressData: updatedData })
+      });
+    } catch(err) {
+      console.error('Failed to save report to backend:', err);
+    }
+
     setForm(blank);
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 3500);
@@ -725,7 +729,13 @@ function NewReportTab() {
             <div className="form-section-header">🗓 Report Date</div>
             <div>
               <label className="field-label">Date (Editing this overrides the record for this date)</label>
-              <input type="date" className="input-field" value={form.date} onChange={e => set('date', e.target.value)} required />
+              <DatePicker 
+                selected={form.date ? new Date(form.date) : new Date()} 
+                onChange={(d: Date | null) => d && set('date', d.toISOString().split('T')[0])} 
+                className="input-field" 
+                dateFormat="yyyy-MM-dd" 
+                required 
+              />
             </div>
 
             {/* Overall Summary */}
@@ -963,6 +973,19 @@ function App() {
   const [activeTab, setActiveTab] = useState('report');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', false);
+
+  const [, setUserProfile] = useLocalStorage('userProfile', {});
+  const [, setProgressData] = useLocalStorage('progressData', []);
+
+  useEffect(() => {
+    fetch('/api/fitness')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.personalInfo) setUserProfile(data.personalInfo);
+        if (data && data.progressData && data.progressData.length > 0) setProgressData(data.progressData);
+      })
+      .catch(err => console.error('Error fetching data:', err));
+  }, []);
 
   return (
     <div className={`app-window ${isDarkMode ? 'dark' : ''}`}>
