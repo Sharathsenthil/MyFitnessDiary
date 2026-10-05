@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "start": "cd server && node index.js"
+    "start": "cd server && node index.js",
+    "postinstall": "cd server && npm install"
   },
   "dependencies": {
     "lucide-react": "^1.52.0",
