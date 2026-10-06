@@ -45,6 +45,11 @@ function App() {
   const [, setUserProfile] = useLocalStorage<object>('userProfile', {});
   const [, setProgressData] = useLocalStorage<unknown[]>('progressData', []);
   const [, setGymDates] = useLocalStorage<string[]>('gymDates', []);
+  const [, setLeaveDates] = useLocalStorage<string[]>('leaveDates', []);
+  const [, setRestDates] = useLocalStorage<string[]>('restDates', []);
+
+  // Theme variables live on <html> too, so the area behind the status bar matches the theme
+  useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
 
   const logout = useCallback(() => {
     try { localStorage.removeItem(TOKEN_KEY); } catch { /* noop */ }
@@ -116,6 +121,8 @@ function App() {
         const reports = sortRecords(cleanRecords(data.progressData));
         if (reports.length > 0) setProgressData(reports);
         if (Array.isArray(data.gymDates) && data.gymDates.length > 0) setGymDates(data.gymDates);
+        if (Array.isArray(data.leaveDates) && data.leaveDates.length > 0) setLeaveDates(data.leaveDates);
+        if (Array.isArray(data.restDates) && data.restDates.length > 0) setRestDates(data.restDates);
       })
       .catch(err => console.error('Error fetching data:', err));
   // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -16,22 +16,36 @@ export interface StreakStats {
 
 const mondayOf = (d: Date) => addDays(d, -((d.getDay() + 6) % 7));
 
-export function computeStreaks(gymDates: string[], today = new Date(), weeksBack = 8): StreakStats {
+/**
+ * Rest days are planned breaks: they neither count as a gym day nor break a streak.
+ * Leave days and unmarked days break it.
+ */
+export function computeStreaks(gymDates: string[], restDates: string[] = [], today = new Date(), weeksBack = 8): StreakStats {
   const set = new Set(gymDates);
+  const rest = new Set(restDates);
   const days = [...set].sort();
   const todayStr = toDateStr(today);
 
-  // Current streak: consecutive days ending today, or yesterday if today isn't logged yet.
-  let cursor = set.has(todayStr) ? today : addDays(today, -1);
+  // Current streak: walk back from today (or yesterday if today isn't marked yet).
+  let cursor = set.has(todayStr) || rest.has(todayStr) ? today : addDays(today, -1);
   let current = 0;
-  while (set.has(toDateStr(cursor))) { current++; cursor = addDays(cursor, -1); }
+  for (;;) {
+    const key = toDateStr(cursor);
+    if (set.has(key)) current++;
+    else if (!rest.has(key)) break;
+    cursor = addDays(cursor, -1);
+  }
 
-  // Longest streak anywhere in the history.
+  // Longest streak: walk forward day by day from the first gym day.
   let longest = 0, run = 0, longestEnd: string | null = null;
-  for (let i = 0; i < days.length; i++) {
-    const prev = i > 0 ? parseDateStr(days[i - 1]) : null;
-    run = prev && toDateStr(addDays(prev, 1)) === days[i] ? run + 1 : 1;
-    if (run > longest) { longest = run; longestEnd = days[i]; }
+  if (days.length > 0) {
+    for (let d = parseDateStr(days[0]); toDateStr(d) <= todayStr; d = addDays(d, 1)) {
+      const key = toDateStr(d);
+      if (set.has(key)) {
+        run++;
+        if (run > longest) { longest = run; longestEnd = key; }
+      } else if (!rest.has(key) && key !== todayStr) run = 0;
+    }
   }
 
   // Weekly bars (Mon-Sun), oldest first.

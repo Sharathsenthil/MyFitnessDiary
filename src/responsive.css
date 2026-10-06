@@ -223,8 +223,34 @@ button { touch-action: manipulation; }
   .app-window { position: fixed; inset: 0; height: auto; width: auto; }
 }
 @media (display-mode: standalone) {
+  html, body { background: var(--sidebar-bg); }
   .app-window {
     padding-top: env(safe-area-inset-top);
     background: linear-gradient(var(--sidebar-bg) env(safe-area-inset-top), var(--app-bg) 0);
   }
+}
+
+/* calendar marks: gym (green), leave (red), rest (blue) */
+.calendar-day { -webkit-tap-highlight-color: transparent; touch-action: manipulation; user-select: none; -webkit-user-select: none; }
+.calendar-day.gym-day { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+.calendar-day.leave-day { background: var(--danger); border-color: var(--danger); color: #fff; }
+.calendar-day.rest-day { background: #3b82f6; border-color: #3b82f6; color: #fff; }
+.calendar-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); }
+.calendar-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
+.calendar-legend .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+.dot.gym { background: var(--accent); } .dot.leave { background: var(--danger); } .dot.rest { background: #3b82f6; }
+
+/* hero line: keep each fact together instead of breaking mid-date */
+.hero-sub { display: flex; flex-wrap: wrap; gap: 0.15rem 0.9rem; }
+.hero-sub span { white-space: nowrap; }
+
+/* weight goals: centred, equal columns */
+.goal-wrap { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; padding: 0.5rem 0; }
+.goal-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.75rem; width: 100%; max-width: 560px; text-align: center; }
+.goal-stat-label { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.2rem; }
+.goal-stat-value { font-weight: 600; font-size: 1rem; }
+@media (max-width: 768px) {
+  .goal-grid { flex-direction: row !important; gap: 0.5rem !important; width: 100%; }
+  .goal-grid .goal-arrow { transform: none; }
+  .goal-stat-label { font-size: 0.72rem; }
 }

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react';
-import { Dumbbell } from 'lucide-react';
-import type { UserProfile } from '../types';
+import { Dumbbell, X, Moon } from 'lucide-react';
+import type { DayStatus, UserProfile } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { parseDateStr, toDateStr } from '../lib/dates';
 import { useAuth } from '../lib/auth';
@@ -10,6 +10,8 @@ import { StreakPanel } from '../components/StreakPanel';
 export function DailyLogTab() {
   const { isAdmin, save } = useAuth();
   const [gymDates, setGymDates] = useLocalStorage<string[]>('gymDates', []);
+  const [leaveDates, setLeaveDates] = useLocalStorage<string[]>('leaveDates', []);
+  const [restDates, setRestDates] = useLocalStorage<string[]>('restDates', []);
   const [userProfile] = useLocalStorage<Pick<UserProfile, 'gymJoinedDate'>>('userProfile', { gymJoinedDate: '2026-01-01' });
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
@@ -21,17 +23,31 @@ export function DailyLogTab() {
   const daysAttended = gymDates.filter(d => d.startsWith(`${yearStr}-${monthStr}`)).length;
 
   const joinedDate = parseDateStr(userProfile.gymJoinedDate || '2026-01-01');
-  const totalDaysSinceJoined = Math.max(1, Math.floor((today.getTime() - joinedDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-  const totalDaysAttended = gymDates.filter(d => parseDateStr(d) >= joinedDate).length;
-  const overallPct = Math.round((totalDaysAttended / totalDaysSinceJoined) * 100);
+  const inMonth = (list: string[]) => list.filter(d => d.startsWith(`${yearStr}-${monthStr}`)).length;
+  const daysLeave = inMonth(leaveDates);
+  const daysRest = inMonth(restDates);
 
-  const toggleDate = (dayStr: string) => {
+  const sinceJoined = (list: string[]) => list.filter(d => parseDateStr(d) >= joinedDate && parseDateStr(d) <= today);
+  const restSinceJoined = sinceJoined(restDates).length;
+  // Rest days are planned, so they don't count against your attendance
+  const totalDaysSinceJoined = Math.max(1, Math.floor((today.getTime() - joinedDate.getTime()) / (1000 * 60 * 60 * 24)) + 1 - restSinceJoined);
+  const totalDaysAttended = gymDates.filter(d => parseDateStr(d) >= joinedDate).length;
+  const overallPct = Math.min(100, Math.round((totalDaysAttended / totalDaysSinceJoined) * 100));
+
+  const statusOf = (dayStr: string): DayStatus | null =>
+    gymDates.includes(dayStr) ? 'gym' : leaveDates.includes(dayStr) ? 'leave' : restDates.includes(dayStr) ? 'rest' : null;
+
+  // Each tap moves to the next mark: none -> gym -> leave -> rest -> none
+  const NEXT: Record<string, DayStatus | null> = { none: 'gym', gym: 'leave', leave: 'rest', rest: null };
+  const cycleDate = (dayStr: string) => {
     if (!isAdmin) return;
-    const next = gymDates.includes(dayStr)
-      ? gymDates.filter(d => d !== dayStr)
-      : [...gymDates, dayStr];
-    setGymDates(next);
-    save({ gymDates: next });
+    const next = NEXT[statusOf(dayStr) ?? 'none'];
+    const without = (list: string[]) => list.filter(d => d !== dayStr);
+    const gym = next === 'gym' ? [...without(gymDates), dayStr] : without(gymDates);
+    const leave = next === 'leave' ? [...without(leaveDates), dayStr] : without(leaveDates);
+    const rest = next === 'rest' ? [...without(restDates), dayStr] : without(restDates);
+    setGymDates(gym); setLeaveDates(leave); setRestDates(rest);
+    save({ gymDates: gym, leaveDates: leave, restDates: rest });
   };
 
   const days: ReactNode[] = [];
@@ -45,27 +61,32 @@ export function DailyLogTab() {
   for (let i = 1; i <= daysInMonth; i++) {
     const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
     const dayStr = toDateStr(d);
-    const isGymDay = gymDates.includes(dayStr);
+    const status = statusOf(dayStr);
     const isToday = dayStr === toDateStr(today);
-    const isInvalid = !isAdmin || d < joinD || d > todayOnly;
+    const outOfRange = d < joinD || d > todayOnly;
+    const isInvalid = !isAdmin || outOfRange;
+    const faded = outOfRange || (!isAdmin && !status);
 
     days.push(
-      <div 
-        key={i} 
+      <div
+        key={i}
         role="button"
         tabIndex={isInvalid ? -1 : 0}
-        onKeyDown={e => { if (!isInvalid && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleDate(dayStr); } }}
-        className={`calendar-day ${isGymDay ? 'gym-day' : ''} ${isToday ? 'today' : ''} ${isInvalid && !(isGymDay && !isAdmin) ? 'disabled' : ''}`} 
-        onClick={() => !isInvalid && toggleDate(dayStr)}
+        aria-label={`${dayStr}${status ? ` - ${status}` : ''}`}
+        onKeyDown={e => { if (!isInvalid && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); cycleDate(dayStr); } }}
+        className={`calendar-day ${status ? `${status}-day` : ''} ${isToday ? 'today' : ''} ${faded ? 'disabled' : ''}`}
+        onClick={() => !isInvalid && cycleDate(dayStr)}
       >
         <span className="day-number">{i}</span>
-        {isGymDay && !isInvalid && <Dumbbell size={16} color="var(--accent-text)" />}
+        {status === 'gym' && <Dumbbell size={16} />}
+        {status === 'leave' && <X size={16} />}
+        {status === 'rest' && <Moon size={16} />}
       </div>
     );
   }
 
   const pct = Math.round((daysAttended / daysInMonth) * 100);
-  const streaks = computeStreaks(gymDates);
+  const streaks = computeStreaks(gymDates, restDates);
 
   return (
     <div className="tab-content fade-in">
@@ -110,8 +131,15 @@ export function DailyLogTab() {
           ))}
           {days}
         </div>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '1rem' }}>
-          {isAdmin ? 'Click any day to mark it as a gym day 🏋️' : '🔒 View only — log in as admin to edit'}
+        <div className="calendar-legend">
+          <span><i className="dot gym" /> Gym {daysAttended}</span>
+          <span><i className="dot leave" /> Leave {daysLeave}</span>
+          <span><i className="dot rest" /> Rest {daysRest}</span>
+        </div>
+        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.75rem' }}>
+          {isAdmin
+            ? 'Tap a day: once = gym 🏋️ · twice = leave ❌ · three times = rest 🌙 · four times = clear'
+            : '🔒 View only — log in as admin to edit'}
         </p>
       </div>
     </div>

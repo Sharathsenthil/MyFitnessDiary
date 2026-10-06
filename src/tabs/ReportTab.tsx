@@ -148,9 +148,9 @@ export function ReportTab() {
                 {isAdmin && <button onClick={() => setIsEditingProfile(true)} className="tab-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>✏️ Edit</button>}
               </h2>
               <p className="hero-sub">
-                🎂 {Math.floor((new Date().getTime() - parseDateStr(userProfile.dob).getTime()) / 31557600000)} yrs
-                &nbsp;•&nbsp; 📏 {userProfile.height} cm
-                &nbsp;•&nbsp; 🏋️ Joined: {userProfile.gymJoinedDate}
+                <span>🎂 {Math.floor((new Date().getTime() - parseDateStr(userProfile.dob).getTime()) / 31557600000)} yrs</span>
+                <span>📏 {userProfile.height} cm</span>
+                <span>🏋️ Joined {userProfile.gymJoinedDate}</span>
               </p>
             </div>
           )}
@@ -309,8 +309,7 @@ export function ReportTab() {
 
       {/* ── 7. Weight Management Goal ── */}
       <Section title="Weight Management Goals" icon={<Target size={18} color="var(--warning)" />}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-around', flexWrap: 'wrap', gap: '1.5rem', padding: '0.5rem 0' }}>
-          
+        <div className="goal-wrap">
           {/* Current vs Target Weight */}
           <div className="goal-grid" style={{ margin: 0, padding: 0, gap: '1rem' }}>
             <div className="goal-current">
@@ -325,21 +324,20 @@ export function ReportTab() {
           </div>
 
           {/* Actionable Metrics */}
-          <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', textAlign: 'center' }}>
+          <div className="goal-stats">
             <div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>⚖️ Weight to Lose</div>
-              <div style={{ color: 'var(--warning)', fontWeight: 600, fontSize: '1rem' }}>{weightManagement.weightControl} KG</div>
+              <div className="goal-stat-label">⚖️ Weight to Lose</div>
+              <div className="goal-stat-value" style={{ color: 'var(--warning)' }}>{weightManagement.weightControl} KG</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>🥓 Fat to Reduce</div>
-              <div style={{ color: 'var(--warning)', fontWeight: 600, fontSize: '1rem' }}>{weightManagement.fatControl} KG</div>
+              <div className="goal-stat-label">🥓 Fat to Reduce</div>
+              <div className="goal-stat-value" style={{ color: 'var(--warning)' }}>{weightManagement.fatControl} KG</div>
             </div>
             <div>
-              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem' }}>💪 Muscle to Gain</div>
-              <div style={{ color: 'var(--success)', fontWeight: 600, fontSize: '1rem' }}>+{weightManagement.muscleControl} KG</div>
+              <div className="goal-stat-label">💪 Muscle to Gain</div>
+              <div className="goal-stat-value" style={{ color: 'var(--success)' }}>+{weightManagement.muscleControl} KG</div>
             </div>
           </div>
-
         </div>
       </Section>
 

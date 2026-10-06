@@ -29,6 +29,11 @@ export interface FitnessResponse {
   personalInfo?: UserProfile;
   progressData?: ReportRecord[];
   gymDates?: string[];
+  leaveDates?: string[];
+  restDates?: string[];
 }
 
 export type TabId = 'report' | 'daily' | 'new-report' | 'progress';
+
+/** How a calendar day is marked. Unmarked days have no status. */
+export type DayStatus = 'gym' | 'leave' | 'rest';
