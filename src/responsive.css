@@ -235,8 +235,6 @@ button { touch-action: manipulation; }
 .calendar-day.gym-day { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
 .calendar-day.leave-day { background: var(--danger); border-color: var(--danger); color: #fff; }
 .calendar-day.rest-day { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-.calendar-legend { display: flex; justify-content: center; flex-wrap: wrap; gap: 0.5rem 1.25rem; margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); }
-.calendar-legend span { display: inline-flex; align-items: center; gap: 0.4rem; }
 .calendar-legend .dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
 .dot.gym { background: var(--accent); } .dot.leave { background: var(--danger); } .dot.rest { background: #3b82f6; }
 
@@ -264,3 +262,11 @@ button { touch-action: manipulation; }
   .tab-btn { min-height: 40px; }
   .section-header { min-height: 48px; }
 }
+
+/* calendar legend: three equal, centred columns */
+.calendar-legend { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--card-border); }
+.legend-item { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; text-align: center; }
+.legend-name { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.85rem; color: var(--text-muted); font-weight: 600; }
+.legend-count { font-size: 1.4rem; font-weight: 700; line-height: 1.2; color: var(--text-main); }
+.legend-tap { font-size: 0.72rem; color: var(--text-muted); }
+.calendar-hint { font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 0.9rem; }

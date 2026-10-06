@@ -132,14 +132,24 @@ export function DailyLogTab() {
           {days}
         </div>
         <div className="calendar-legend">
-          <span><i className="dot gym" /> Gym {daysAttended}</span>
-          <span><i className="dot leave" /> Leave {daysLeave}</span>
-          <span><i className="dot rest" /> Rest {daysRest}</span>
+          <div className="legend-item">
+            <span className="legend-name"><i className="dot gym" /> Gym</span>
+            <span className="legend-count">{daysAttended}</span>
+            <span className="legend-tap">1 tap</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-name"><i className="dot leave" /> Leave</span>
+            <span className="legend-count">{daysLeave}</span>
+            <span className="legend-tap">2 taps</span>
+          </div>
+          <div className="legend-item">
+            <span className="legend-name"><i className="dot rest" /> Rest</span>
+            <span className="legend-count">{daysRest}</span>
+            <span className="legend-tap">3 taps</span>
+          </div>
         </div>
-        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.75rem' }}>
-          {isAdmin
-            ? 'Tap a day: once = gym 🏋️ · twice = leave ❌ · three times = rest 🌙 · four times = clear'
-            : '🔒 View only — log in as admin to edit'}
+        <p className="calendar-hint">
+          {isAdmin ? 'Tap a day to cycle its mark. A 4th tap clears it.' : '🔒 View only — log in as admin to edit'}
         </p>
       </div>
     </div>
