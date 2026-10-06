@@ -1,11 +1,11 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, useEffect, useCallback, createContext, useContext, type FormEvent } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import {
   Activity, Scale, Dumbbell, Flame, Target, User,
   LayoutDashboard, FileText, CalendarCheck, TrendingUp,
   PieChart as PieChartIcon, Droplets, ChevronDown, ChevronUp, Plus,
-  Menu, Moon, Sun, GitCompare
+  Menu, Moon, Sun, GitCompare, Lock, Unlock, X, KeyRound
 } from 'lucide-react';
 import { fitnessData } from './data';
 import {
@@ -16,22 +16,60 @@ import {
 import './index.css';
 
 /* ─── Hook ─────────────────────────────────────────── */
+// All instances sharing a key stay in sync (same tab via custom event, other tabs via "storage").
+const SYNC_EVENT = 'local-storage-sync';
+
 function useLocalStorage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(() => {
+  const read = (): T => {
     try {
       const item = window.localStorage.getItem(key);
       return item ? JSON.parse(item) : initialValue;
     } catch { return initialValue; }
-  });
-  const setValue = (value: T | ((val: T) => T)) => {
+  };
+  const [storedValue, setStoredValue] = useState<T>(read);
+
+  useEffect(() => {
+    const onSync = (e: Event) => {
+      if ((e as CustomEvent).detail?.key === key) setStoredValue(read());
+    };
+    const onStorage = (e: StorageEvent) => { if (e.key === key) setStoredValue(read()); };
+    window.addEventListener(SYNC_EVENT, onSync);
+    window.addEventListener('storage', onStorage);
+    return () => {
+      window.removeEventListener(SYNC_EVENT, onSync);
+      window.removeEventListener('storage', onStorage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  const setValue = useCallback((value: T | ((val: T) => T)) => {
     try {
-      const v = value instanceof Function ? value(storedValue) : value;
+      const raw = window.localStorage.getItem(key);
+      const current: T = raw ? JSON.parse(raw) : initialValue;
+      const v = value instanceof Function ? value(current) : value;
       setStoredValue(v);
       window.localStorage.setItem(key, JSON.stringify(v));
+      window.dispatchEvent(new CustomEvent(SYNC_EVENT, { detail: { key } }));
     } catch { /* noop */ }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
   return [storedValue, setValue] as const;
 }
+
+/* ─── Local-time date helpers (toISOString() is UTC and shifts the day in e.g. IST) ─── */
+const toDateStr = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const parseDateStr = (s: string) => {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
+};
+
+/* ─── Admin auth (view-only unless logged in; server enforces it too) ─── */
+const TOKEN_KEY = 'adminToken';
+const AuthContext = createContext<{ isAdmin: boolean; save: (body: object) => Promise<void> }>({
+  isAdmin: false, save: async () => {}
+});
+const useAuth = () => useContext(AuthContext);
 
 /* ─── Helpers ───────────────────────────────────────── */
 function statusInfo(value: number, min?: number, max?: number, isHighBad = false) {
@@ -110,6 +148,7 @@ const FormField = ({ label, fieldKey, form, set, step = '0.1', required = false,
 
 /* ─── REPORT TAB ─────────────────────────────────────── */
 function ReportTab() {
+  const { isAdmin, save } = useAuth();
   const [progressData] = useLocalStorage<any[]>('progressData', []);
   const latestData = progressData.length > 0 ? progressData[progressData.length - 1] : {};
 
@@ -183,7 +222,7 @@ function ReportTab() {
     name: 'Fitness Enthusiast',
     dob: '1998-05-15',
     height: personalInfo.height,
-    gymJoinedDate: new Date(new Date().getFullYear(), 0, 1).toISOString().split('T')[0]
+    gymJoinedDate: toDateStr(new Date(new Date().getFullYear(), 0, 1))
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState(userProfile);
@@ -196,30 +235,25 @@ function ReportTab() {
     setUserProfile(profileForm);
     setIsEditingProfile(false);
     
-    // Save to the MongoDB backend
-    try {
-      await fetch('/api/fitness', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ personalInfo: profileForm })
-      });
-    } catch(err) {
-      console.error('Failed to save to MongoDB backend:', err);
-    }
+    await save({ personalInfo: profileForm });
   };
 
   const exportData = () => {
     if (progressData.length === 0) return alert("No data to export");
-    const headers = Object.keys(progressData[0]).join(',');
-    const rows = progressData.map((row: any) => Object.values(row).join(',')).join('\n');
-    const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows;
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "fitness_data.csv");
+    const esc = (v: unknown) => {
+      const t = String(v ?? '');
+      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const keys = Array.from(new Set(progressData.flatMap((r: any) => Object.keys(r))));
+    const csv = [keys.join(','), ...progressData.map((r: any) => keys.map(k => esc(r[k])).join(','))].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fitness_data.csv';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const displayData = chartFilter === 'last10' ? progressData.slice(-10) : progressData;
@@ -257,7 +291,7 @@ function ReportTab() {
                   <input type="date" className="input-field" value={profileForm.gymJoinedDate} onChange={e => setProfileForm(f => ({ ...f, gymJoinedDate: e.target.value }))} required />
                 </div>
               </div>
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2 mt-1 flex-wrap">
                 <button type="submit" className="submit-btn" style={{ padding: '0.4rem', fontSize: '0.9rem' }}>💾 Save</button>
                 <button type="button" className="tab-btn" onClick={() => { setIsEditingProfile(false); setProfileForm(userProfile); }}>Cancel</button>
               </div>
@@ -266,10 +300,10 @@ function ReportTab() {
             <div>
               <h2 className="hero-id" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 {userProfile.name}
-                <button onClick={() => setIsEditingProfile(true)} className="tab-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>✏️ Edit</button>
+                {isAdmin && <button onClick={() => setIsEditingProfile(true)} className="tab-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>✏️ Edit</button>}
               </h2>
               <p className="hero-sub">
-                🎂 {Math.floor((new Date().getTime() - new Date(userProfile.dob).getTime()) / 31557600000)} yrs
+                🎂 {Math.floor((new Date().getTime() - parseDateStr(userProfile.dob).getTime()) / 31557600000)} yrs
                 &nbsp;•&nbsp; 📏 {userProfile.height} cm
                 &nbsp;•&nbsp; 🏋️ Joined: {userProfile.gymJoinedDate}
               </p>
@@ -300,7 +334,7 @@ function ReportTab() {
 
       {/* ── 1. Core Metrics ── */}
       <Section title="Core Body Metrics" icon={<Scale size={18} color="var(--accent)" />}>
-        <table className="data-table">
+        <div className="table-scroll"><table className="data-table">
           <thead>
             <tr><th>Metric</th><th>Value</th><th>Normal Range</th><th>Status</th></tr>
           </thead>
@@ -311,13 +345,13 @@ function ReportTab() {
             <MetricRow label="🔥 BMR" value={obesityAnalysis.bmr.value} unit="Kcal" tooltip="Basal Metabolic Rate — calories burned at rest." />
             <MetricRow label="⚙️ Fat Free Mass" value={obesityAnalysis.ffm.value} unit="KG" tooltip="Everything in your body that isn't fat." />
           </tbody>
-        </table>
+        </table></div>
       </Section>
 
       {/* ── 2. Body Composition ── */}
       <Section title="Body Composition" icon={<PieChartIcon size={18} color="var(--accent)" />}>
         <div className="two-col-layout">
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr><th>Component</th><th>Value</th><th>Normal Range</th><th>Status</th></tr>
             </thead>
@@ -327,14 +361,14 @@ function ReportTab() {
               <MetricRow label="🥓 Fat Mass" value={bodyComponent.fat.value} unit="KG" min={bodyComponent.fat.min} max={bodyComponent.fat.max} isHighBad tooltip="Total fat mass." />
               <MetricRow label="🧂 Inorganic Salt" value={bodyComponent.inorganicSalt.value} unit="KG" min={bodyComponent.inorganicSalt.min} max={bodyComponent.inorganicSalt.max} tooltip="Mineral/salt content in bones and cells." />
             </tbody>
-          </table>
-          <div style={{ height: 230 }}>
+          </table></div>
+          <div className="pie-wrap">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie data={bodyCompData} cx="50%" cy="50%" innerRadius={60} outerRadius={88} paddingAngle={4} dataKey="value" stroke="none">
                   {bodyCompData.map((e, i) => <Cell key={i} fill={e.color} />)}
                 </Pie>
-                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} />
+                <RechartsTooltip contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-main)' }} />
                 <Legend 
                   verticalAlign="bottom" 
                   iconSize={10} 
@@ -356,7 +390,7 @@ function ReportTab() {
       <div className="sections-grid">
         {/* ── 3. Fat Analysis ── */}
         <Section title="Fat Analysis 🥓" icon={<Flame size={18} color="var(--warning)" />}>
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr><th>Metric</th><th>Value</th><th>Range</th><th>Status</th></tr>
             </thead>
@@ -365,12 +399,12 @@ function ReportTab() {
               <MetricRow label="Trunk Fat Mass" value={fatAnalysis.trunkFatMass.value} unit="KG" min={fatAnalysis.trunkFatMass.min} max={fatAnalysis.trunkFatMass.max} isHighBad tooltip="Fat concentrated in the torso area." />
               <MetricRow label="Visceral Fat Index" value={fatAnalysis.visceralFatIndex.value} unit="" min={fatAnalysis.visceralFatIndex.min} max={fatAnalysis.visceralFatIndex.max} isHighBad tooltip="Dangerous fat surrounding internal organs." />
             </tbody>
-          </table>
+          </table></div>
         </Section>
 
         {/* ── 4. Muscle Analysis ── */}
         <Section title="Muscle Analysis 💪" icon={<Dumbbell size={18} color="var(--success)" />}>
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr><th>Metric</th><th>Value</th><th>Range</th><th>Status</th></tr>
             </thead>
@@ -379,12 +413,12 @@ function ReportTab() {
               <MetricRow label="Skeletal Muscle (SMM)" value={muscleAnalysis.smm.value} unit="KG" min={muscleAnalysis.smm.min} max={muscleAnalysis.smm.max} tooltip="Muscle attached to bones — grows with exercise." />
               <MetricRow label="Protein Content" value={muscleAnalysis.protein.value} unit="KG" min={muscleAnalysis.protein.min} max={muscleAnalysis.protein.max} tooltip="Protein stored in muscle tissue." />
             </tbody>
-          </table>
+          </table></div>
         </Section>
 
         {/* ── 5. Segmental Analysis ── */}
         <Section title="Segmental Analysis 🦵" icon={<Activity size={18} color="var(--accent)" />}>
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr><th>Segment</th><th>💪 Muscle KG</th><th>🥓 Fat KG</th></tr>
             </thead>
@@ -403,12 +437,12 @@ function ReportTab() {
                 </tr>
               ))}
             </tbody>
-          </table>
+          </table></div>
         </Section>
 
         {/* ── 6. Water & Edema ── */}
         <Section title="Hydration & Edema 💧" icon={<Droplets size={18} color="#00f2fe" />}>
-          <table className="data-table">
+          <div className="table-scroll"><table className="data-table">
             <thead>
               <tr><th>Metric</th><th>Value</th><th>Range</th><th>Status</th></tr>
             </thead>
@@ -424,7 +458,7 @@ function ReportTab() {
               <MetricRow label="Intracellular H₂O" value={edemaAnalysis.intracellularWater} unit="L" tooltip="Water inside your cells." />
               <MetricRow label="Extracellular H₂O" value={edemaAnalysis.extracellularWater} unit="L" tooltip="Water outside cells — high = possible inflammation." />
             </tbody>
-          </table>
+          </table></div>
         </Section>
       </div>
 
@@ -467,7 +501,7 @@ function ReportTab() {
       {/* ── 8. Progress Chart ── */}
       <Section title="Progress Over Time" icon={<TrendingUp size={18} color="var(--accent)" />}>
         <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-          <div className="flex gap-2" style={{ background: 'rgba(255,255,255,0.04)', padding: '0.2rem', borderRadius: '10px' }}>
+          <div className="flex gap-2 segmented">
             <button className={`tab-btn ${chartFilter === 'last10' ? 'active' : ''}`} onClick={() => setChartFilter('last10')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Last 10 Reports</button>
             <button className={`tab-btn ${chartFilter === 'all' ? 'active' : ''}`} onClick={() => setChartFilter('all')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>All Time</button>
           </div>
@@ -475,14 +509,14 @@ function ReportTab() {
         </div>
 
         {displayData.length > 0 ? (
-          <div style={{ height: 320 }}>
+          <div className="line-wrap">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={displayData} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.07)" />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" />
                 <XAxis dataKey="date" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
                 <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
                 <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: '#fff' }} 
+                  contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-main)' }} 
                   itemSorter={(item) => {
                     const order = ['Weight (KG)', 'Muscle (KG)', 'Fat (KG)', 'SMM (KG)', 'PBF (%)'];
                     return order.indexOf(item.name as string);
@@ -528,6 +562,7 @@ function ReportTab() {
 
 /* ─── DAILY LOG TAB ──────────────────────────────────── */
 function DailyLogTab() {
+  const { isAdmin, save } = useAuth();
   const [gymDates, setGymDates] = useLocalStorage<string[]>('gymDates', []);
   const [userProfile] = useLocalStorage('userProfile', { gymJoinedDate: '2026-01-01' });
   const today = new Date();
@@ -539,21 +574,24 @@ function DailyLogTab() {
   const monthStr = String(currentMonth.getMonth() + 1).padStart(2, '0');
   const daysAttended = gymDates.filter(d => d.startsWith(`${yearStr}-${monthStr}`)).length;
 
-  const joinedDate = new Date(userProfile.gymJoinedDate || '2026-01-01');
+  const joinedDate = parseDateStr(userProfile.gymJoinedDate || '2026-01-01');
   const totalDaysSinceJoined = Math.max(1, Math.floor((today.getTime() - joinedDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-  const totalDaysAttended = gymDates.filter(d => new Date(d) >= joinedDate).length;
+  const totalDaysAttended = gymDates.filter(d => parseDateStr(d) >= joinedDate).length;
   const overallPct = Math.round((totalDaysAttended / totalDaysSinceJoined) * 100);
 
   const toggleDate = (dayStr: string) => {
-    setGymDates(gymDates.includes(dayStr)
+    if (!isAdmin) return;
+    const next = gymDates.includes(dayStr)
       ? gymDates.filter(d => d !== dayStr)
-      : [...gymDates, dayStr]);
+      : [...gymDates, dayStr];
+    setGymDates(next);
+    save({ gymDates: next });
   };
 
   const days: React.ReactNode[] = [];
   for (let i = 0; i < firstDayOfMonth; i++) days.push(<div key={`e-${i}`} className="calendar-day empty" />);
   
-  const joinD = new Date(userProfile.gymJoinedDate || '2026-01-01');
+  const joinD = parseDateStr(userProfile.gymJoinedDate || '2026-01-01');
   joinD.setHours(0,0,0,0);
   const todayOnly = new Date();
   todayOnly.setHours(0,0,0,0);
@@ -562,13 +600,16 @@ function DailyLogTab() {
     const d = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
     const dayStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     const isGymDay = gymDates.includes(dayStr);
-    const isToday = dayStr === today.toISOString().split('T')[0];
-    const isInvalid = d < joinD || d > todayOnly;
+    const isToday = dayStr === toDateStr(today);
+    const isInvalid = !isAdmin || d < joinD || d > todayOnly;
 
     days.push(
       <div 
         key={i} 
-        className={`calendar-day ${isGymDay ? 'gym-day' : ''} ${isToday ? 'today' : ''} ${isInvalid ? 'disabled' : ''}`} 
+        role="button"
+        tabIndex={isInvalid ? -1 : 0}
+        onKeyDown={e => { if (!isInvalid && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggleDate(dayStr); } }}
+        className={`calendar-day ${isGymDay ? 'gym-day' : ''} ${isToday ? 'today' : ''} ${isInvalid && !(isGymDay && !isAdmin) ? 'disabled' : ''}`} 
         onClick={() => !isInvalid && toggleDate(dayStr)}
       >
         <span className="day-number">{i}</span>
@@ -602,7 +643,7 @@ function DailyLogTab() {
             </div>
           </div>
           
-          <div style={{ flex: 1, minWidth: 200, borderLeft: '1px solid rgba(255,255,255,0.08)', paddingLeft: '1.25rem' }}>
+          <div className="attendance-alltime" style={{ flex: 1, minWidth: 200 }}>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>All Time (Since {userProfile.gymJoinedDate})</div>
             <div>
               <span className="gradient-text" style={{ fontSize: '2.5rem', fontWeight: 700 }}>{totalDaysAttended}</span>
@@ -622,7 +663,7 @@ function DailyLogTab() {
           {days}
         </div>
         <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '1rem' }}>
-          Click any day to mark it as a gym day 🏋️
+          {isAdmin ? 'Click any day to mark it as a gym day 🏋️' : '🔒 View only — log in as admin to edit'}
         </p>
       </div>
     </div>
@@ -631,9 +672,10 @@ function DailyLogTab() {
 
 /* ─── NEW REPORT TAB ─────────────────────────────────── */
 function NewReportTab() {
+  const { save } = useAuth();
   const [progressData, setProgressData] = useLocalStorage('progressData', [
     {
-      date: new Date().toISOString().split('T')[0],
+      date: toDateStr(new Date()),
       weight: fitnessData.bodyComponent.weight.value,
       fat: fitnessData.bodyComponent.fat.value,
       muscle: fitnessData.muscleAnalysis.muscle.value,
@@ -668,7 +710,7 @@ function NewReportTab() {
   ]);
 
   const blank = {
-    date: new Date().toISOString().split('T')[0],
+    date: toDateStr(new Date()),
     weight: '', fat: '', muscle: '', pbf: '', smm: '', bmr: '', whr: '', ffm: '', vfi: '', bmi: '',
     score: '', bodyAge: '', bodyType: '',
     protein: '', water: '', salt: '', trunkFat: '', bodyWaterPct: '', icw: '', ecw: '',
@@ -687,19 +729,10 @@ function NewReportTab() {
       if (k !== 'date' && k !== 'bodyType' && newData[k] !== '') newData[k] = Number(newData[k]);
     });
     const updatedData = [...progressData.filter((d: any) => d.date !== form.date), newData]
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      .sort((a, b) => parseDateStr(a.date).getTime() - parseDateStr(b.date).getTime());
     setProgressData(updatedData);
 
-    // Save progress to MongoDB
-    try {
-      await fetch('/api/fitness', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ progressData: updatedData })
-      });
-    } catch(err) {
-      console.error('Failed to save report to backend:', err);
-    }
+    await save({ progressData: updatedData });
 
     setForm(blank);
     setShowSuccess(true);
@@ -730,8 +763,8 @@ function NewReportTab() {
             <div>
               <label className="field-label">Date (Editing this overrides the record for this date)</label>
               <DatePicker 
-                selected={form.date ? new Date(form.date) : new Date()} 
-                onChange={(d: Date | null) => d && set('date', d.toISOString().split('T')[0])} 
+                selected={form.date ? parseDateStr(form.date) : new Date()} 
+                onChange={(d: Date | null) => d && set('date', toDateStr(d))} 
                 className="input-field" 
                 dateFormat="yyyy-MM-dd" 
                 required 
@@ -841,7 +874,7 @@ function NewReportTab() {
               <div className="panel-title"><TrendingUp size={18} /> 📅 History</div>
             </div>
             <div style={{ overflowX: 'auto' }}>
-              <table className="data-table">
+              <div className="table-scroll"><table className="data-table">
                 <thead>
                   <tr>
                     <th>Date</th>
@@ -868,7 +901,7 @@ function NewReportTab() {
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </table></div>
             </div>
           </div>
         )}
@@ -920,18 +953,18 @@ function CompareTab() {
           <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Analyze your progress over time</div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+        <div className="compare-selects">
           <select className="input-field" value={date1} onChange={e => setDate1(e.target.value)} style={{ flex: 1, cursor: 'pointer' }}>
             {progressData.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
           </select>
-          <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-muted)', fontWeight: 700 }}>VS</div>
+          <div className="compare-vs">VS</div>
           <select className="input-field" value={date2} onChange={e => setDate2(e.target.value)} style={{ flex: 1, cursor: 'pointer' }}>
             {progressData.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
           </select>
         </div>
 
-        <div style={{ display: 'grid', gap: '0.5rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+        <div className="compare-table">
+          <div className="compare-row compare-head">
             <div>Metric</div>
             <div style={{ textAlign: 'right' }}>{date1}</div>
             <div style={{ textAlign: 'right' }}>{date2}</div>
@@ -952,8 +985,8 @@ function CompareTab() {
             }
 
             return (
-              <div key={m.key} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: '1rem', padding: '1rem', borderBottom: '1px solid var(--card-border)', alignItems: 'center' }}>
-                <div style={{ fontWeight: 500 }}>{m.label}</div>
+              <div key={m.key} className="compare-row">
+                <div className="compare-label">{m.label}</div>
                 <div style={{ textAlign: 'right' }}>{v1.toFixed(1)}</div>
                 <div style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text-main)' }}>{v2.toFixed(1)}</div>
                 <div style={{ textAlign: 'right', fontWeight: 700, color: diffColor }}>
@@ -969,82 +1002,214 @@ function CompareTab() {
 }
 
 /* ─── APP ─────────────────────────────────────────────── */
+const NAV_ITEMS = [
+  { id: 'report', label: 'Dashboard', Icon: LayoutDashboard },
+  { id: 'daily', label: 'Gym Calendar', Icon: CalendarCheck },
+  { id: 'new-report', label: 'New Report', Icon: FileText },
+  { id: 'compare', label: 'Compare', Icon: GitCompare },
+];
+const TAB_TITLES: Record<string, [string, string]> = {
+  report: ['Health Overview', 'Take control of your health today!'],
+  daily: ['Gym Calendar', 'Track your daily gym attendance'],
+  'new-report': ['New Report', 'Log your latest body composition metrics'],
+  compare: ['Compare Reports', 'Detailed side-by-side analysis'],
+};
 function App() {
   const [activeTab, setActiveTab] = useState('report');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isDarkMode, setIsDarkMode] = useLocalStorage('darkMode', false);
+  const [token, setToken] = useState<string>(() => {
+    try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; }
+  });
+  const [showLogin, setShowLogin] = useState(false);
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const isAdmin = !!token;
+  const [showChangePw, setShowChangePw] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', next: '', confirm: '' });
+  const [pwMsg, setPwMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const [, setUserProfile] = useLocalStorage('userProfile', {});
   const [, setProgressData] = useLocalStorage('progressData', []);
+  const [, setGymDates] = useLocalStorage<string[]>('gymDates', []);
+
+  const logout = useCallback(() => {
+    try { localStorage.removeItem(TOKEN_KEY); } catch { /* noop */ }
+    setToken('');
+  }, []);
+
+  // Persist to the backend; the server rejects it unless the admin token is valid.
+  const save = useCallback(async (body: object) => {
+    try {
+      const res = await fetch('/api/fitness', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify(body)
+      });
+      if (res.status === 401) { logout(); alert('Admin session expired. Please log in again.'); }
+    } catch (err) {
+      console.error('Failed to save to backend:', err);
+    }
+  }, [token, logout]);
+
+  const handleLogin = async (e: FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    try {
+      const res = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) { setLoginError(data.error || 'Login failed'); return; }
+      try { localStorage.setItem(TOKEN_KEY, data.token); } catch { /* noop */ }
+      setToken(data.token);
+      setShowLogin(false);
+      setPassword('');
+    } catch {
+      setLoginError('Cannot reach the server');
+    }
+  };
+
+  const handleChangePassword = async (e: FormEvent) => {
+    e.preventDefault();
+    setPwMsg(null);
+    if (pwForm.next !== pwForm.confirm) return setPwMsg({ ok: false, text: 'New passwords do not match' });
+    try {
+      const res = await fetch('/api/change-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ currentPassword: pwForm.current, newPassword: pwForm.next })
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return setPwMsg({ ok: false, text: data.error || 'Could not change password' });
+      try { localStorage.setItem(TOKEN_KEY, data.token); } catch { /* noop */ }
+      setToken(data.token);
+      setPwForm({ current: '', next: '', confirm: '' });
+      setPwMsg({ ok: true, text: 'Password updated ✓' });
+      setTimeout(() => { setShowChangePw(false); setPwMsg(null); }, 1200);
+    } catch {
+      setPwMsg({ ok: false, text: 'Cannot reach the server' });
+    }
+  };
 
   useEffect(() => {
     fetch('/api/fitness')
-      .then(res => res.json())
+      .then(res => res.ok ? res.json() : null)
       .then(data => {
         if (data && data.personalInfo) setUserProfile(data.personalInfo);
         if (data && data.progressData && data.progressData.length > 0) setProgressData(data.progressData);
+        if (data && Array.isArray(data.gymDates) && data.gymDates.length > 0) setGymDates(data.gymDates);
       })
       .catch(err => console.error('Error fetching data:', err));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Drop a stale/expired token on load
+  useEffect(() => {
+    if (!token) return;
+    fetch('/api/verify', { headers: { Authorization: `Bearer ${token}` } })
+      .then(res => { if (res.status === 401) logout(); })
+      .catch(() => {});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // View-only users can't see the editor tab
+  const navItems = NAV_ITEMS.filter(n => isAdmin || n.id !== 'new-report');
+  const currentTab = !isAdmin && activeTab === 'new-report' ? 'report' : activeTab;
+
   return (
+    <AuthContext.Provider value={{ isAdmin, save }}>
     <div className={`app-window ${isDarkMode ? 'dark' : ''}`}>
       <div className={`sidebar ${isSidebarOpen ? '' : 'closed'}`}>
-        <div style={{ padding: '0.5rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: isSidebarOpen ? 'space-between' : 'center', flexDirection: isSidebarOpen ? 'row' : 'column', gap: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ background: 'var(--accent)', color: 'var(--accent-text)', width: 32, height: 32, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', flexShrink: 0 }}>⚡</div>
-            {isSidebarOpen && <h1 style={{ fontSize: '1.4rem', margin: 0, fontWeight: 700, color: 'white' }}>Fitness Diary</h1>}
-          </div>
-          <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', padding: '0.2rem', display: 'flex' }}>
+        <div className="sidebar-brand">
+          <div className="brand-logo">⚡</div>
+          {isSidebarOpen && <h1 className="brand-name">Fitness Diary</h1>}
+          <button className="sidebar-toggle" aria-label="Toggle sidebar" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
             <Menu size={22} />
           </button>
         </div>
-        
+
         <nav className="sidebar-nav">
-          <button className={`nav-item ${activeTab === 'report' ? 'active' : ''}`} onClick={() => setActiveTab('report')}>
-            <LayoutDashboard size={20} style={{ flexShrink: 0 }} /> {isSidebarOpen && <span>Dashboard</span>}
-          </button>
-          <button className={`nav-item ${activeTab === 'daily' ? 'active' : ''}`} onClick={() => setActiveTab('daily')}>
-            <CalendarCheck size={20} style={{ flexShrink: 0 }} /> {isSidebarOpen && <span>Gym Calendar</span>}
-          </button>
-          <button className={`nav-item ${activeTab === 'new-report' ? 'active' : ''}`} onClick={() => setActiveTab('new-report')}>
-            <FileText size={20} style={{ flexShrink: 0 }} /> {isSidebarOpen && <span>New Report</span>}
-          </button>
-          <button className={`nav-item ${activeTab === 'compare' ? 'active' : ''}`} onClick={() => setActiveTab('compare')}>
-            <GitCompare size={20} style={{ flexShrink: 0 }} /> {isSidebarOpen && <span>Compare</span>}
-          </button>
+          {navItems.map(({ id, label, Icon }) => (
+            <button key={id} className={`nav-item ${currentTab === id ? 'active' : ''}`} onClick={() => setActiveTab(id)} aria-label={label} title={label}>
+              <Icon size={20} style={{ flexShrink: 0 }} /> <span className="nav-label">{isSidebarOpen && label}</span>
+            </button>
+          ))}
         </nav>
       </div>
 
       <div className="main-content">
-        <header style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+        <div className="page-container">
+          <header className="page-header">
             <div>
-              <h1 style={{ fontSize: '1.8rem', fontWeight: 700, color: 'var(--text-main)', margin: '0 0 0.2rem 0' }}>
-                {activeTab === 'report' ? 'Health Overview' : activeTab === 'daily' ? 'Gym Calendar' : activeTab === 'compare' ? 'Compare Reports' : 'New Report'}
-              </h1>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>
-                {activeTab === 'report' ? 'Take control of your health today!' : activeTab === 'daily' ? 'Track your daily gym attendance' : activeTab === 'compare' ? 'Detailed side-by-side analysis' : 'Log your latest body composition metrics'}
-              </p>
+              <h1 className="page-title">{TAB_TITLES[currentTab][0]}</h1>
+              <p className="page-subtitle">{TAB_TITLES[currentTab][1]}</p>
             </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <div 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              style={{ width: 44, height: 44, background: 'var(--card-bg)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(0,0,0,0.02)', color: 'var(--text-main)', cursor: 'pointer', border: '1px solid var(--card-border)' }}>
+            <div className="header-actions">
+            {isAdmin && (
+              <button className="admin-btn" onClick={() => setShowChangePw(true)} title="Change admin password">
+                <KeyRound size={16} /><span>Password</span>
+              </button>
+            )}
+            <button className={`admin-btn ${isAdmin ? 'on' : ''}`} onClick={() => isAdmin ? logout() : setShowLogin(true)} title={isAdmin ? 'Log out of admin' : 'Admin login'}>
+              {isAdmin ? <Unlock size={16} /> : <Lock size={16} />}
+              <span>{isAdmin ? 'Admin · Log out' : 'View only'}</span>
+            </button>
+            <button className="theme-toggle" aria-label="Toggle dark mode" onClick={() => setIsDarkMode(!isDarkMode)}>
               {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+            </button>
             </div>
-          </div>
-        </header>
-        
+          </header>
+
         <div className="tab-wrapper">
-          {activeTab === 'report' && <ReportTab />}
-          {activeTab === 'daily' && <DailyLogTab />}
-          {activeTab === 'new-report' && <NewReportTab />}
-          {activeTab === 'compare' && <CompareTab />}
+          {currentTab === 'report' && <ReportTab />}
+          {currentTab === 'daily' && <DailyLogTab />}
+          {currentTab === 'new-report' && <NewReportTab />}
+          {currentTab === 'compare' && <CompareTab />}
+        </div>
         </div>
       </div>
+
+      {showChangePw && (
+        <div className="modal-backdrop" onClick={() => setShowChangePw(false)}>
+          <form className="modal" onClick={e => e.stopPropagation()} onSubmit={handleChangePassword}>
+            <div className="panel-header">
+              <div className="panel-title"><KeyRound size={18} /> Change Password</div>
+              <button type="button" className="sidebar-toggle" style={{ color: 'var(--text-main)' }} aria-label="Close" onClick={() => setShowChangePw(false)}><X size={20} /></button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <input type="password" className="input-field" placeholder="Current password" autoComplete="current-password" required
+                value={pwForm.current} onChange={e => setPwForm(f => ({ ...f, current: e.target.value }))} />
+              <input type="password" className="input-field" placeholder="New password (min 6 characters)" autoComplete="new-password" minLength={6} required
+                value={pwForm.next} onChange={e => setPwForm(f => ({ ...f, next: e.target.value }))} />
+              <input type="password" className="input-field" placeholder="Confirm new password" autoComplete="new-password" required
+                value={pwForm.confirm} onChange={e => setPwForm(f => ({ ...f, confirm: e.target.value }))} />
+            </div>
+            {pwMsg && <p className={pwMsg.ok ? 'login-ok' : 'login-error'}>{pwMsg.text}</p>}
+            <button type="submit" className="submit-btn" style={{ marginTop: '1rem' }}>Update password</button>
+          </form>
+        </div>
+      )}
+
+      {showLogin && (
+        <div className="modal-backdrop" onClick={() => setShowLogin(false)}>
+          <form className="modal" onClick={e => e.stopPropagation()} onSubmit={handleLogin}>
+            <div className="panel-header">
+              <div className="panel-title"><Lock size={18} /> Admin Login</div>
+              <button type="button" className="sidebar-toggle" style={{ color: 'var(--text-main)' }} aria-label="Close" onClick={() => setShowLogin(false)}><X size={20} /></button>
+            </div>
+            <label className="field-label" htmlFor="admin-pw">Enter the admin password to edit data.</label>
+            <input id="admin-pw" type="password" className="input-field" autoFocus value={password}
+              onChange={e => setPassword(e.target.value)} placeholder="Password" required />
+            {loginError && <p className="login-error">{loginError}</p>}
+            <button type="submit" className="submit-btn" style={{ marginTop: '1rem' }}>Unlock editing</button>
+          </form>
+        </div>
+      )}
     </div>
+    </AuthContext.Provider>
   );
 }
 

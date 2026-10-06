@@ -48,8 +48,9 @@ body {
 /* ── Layout ─────────────────────────── */
 .app-window {
   display: flex;
-  width: 100vw;
+  width: 100%;
   height: 100vh;
+  height: 100dvh;
   max-width: 100%;
   background: var(--app-bg);
   overflow: hidden;
@@ -321,7 +322,7 @@ body {
   justify-content: center;
   gap: 0.75rem;
   margin-bottom: 2rem;
-  background: rgba(255,255,255,0.04);
+  background: var(--panel-bg);
   padding: 0.5rem;
   border-radius: 14px;
   max-width: 560px;
@@ -349,6 +350,7 @@ body {
 
 /* ── Inputs ──────────────────────────── */
 .input-field {
+  min-width: 0;
   width: 100%;
   background: var(--panel-bg);
   border: 1px solid var(--card-border);
@@ -356,7 +358,7 @@ body {
   padding: 0.65rem 0.9rem;
   color: var(--text-main);
   font-family: inherit;
-  font-size: 0.95rem;
+  font-size: 1rem;
   outline: none;
   transition: border-color 0.25s ease;
 }
@@ -438,7 +440,7 @@ body {
   align-items: center;
   gap: 0.2rem;
   cursor: help;
-  text-decoration: underline dotted rgba(255,255,255,0.25);
+  text-decoration: underline dotted var(--text-muted);
   /* Must create its own stacking context to escape table */
   z-index: 1;
 }
@@ -525,13 +527,13 @@ body {
   display: flex;
   align-items: flex-start;
   gap: 0.6rem;
-  background: rgba(255,255,255,0.03);
+  background: var(--panel-bg);
   border-radius: 10px;
   padding: 0.6rem 0.75rem;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid var(--card-border);
   transition: background 0.2s;
 }
-.chart-legend-item:hover { background: rgba(255,255,255,0.06); }
+.chart-legend-item:hover { background: var(--hover-bg); }
 .chart-legend-dot {
   width: 10px;
   height: 10px;
@@ -552,17 +554,3 @@ body {
 }
 
 
-@media (max-width: 768px) {
-  .app-container { padding: 1rem; }
-  .header h1 { font-size: 2rem; }
-  .hero-card { flex-direction: column; padding: 1.25rem; }
-  .hero-scores { justify-content: center; }
-  .two-col-layout { grid-template-columns: 1fr; }
-  .goal-grid { flex-direction: column; gap: 0.75rem; }
-  .goal-arrow { transform: rotate(90deg); }
-  .grid-cols-2 { grid-template-columns: 1fr; }
-  .sections-grid { grid-template-columns: 1fr; }
-  .tab-btn { font-size: 0.85rem; padding: 0.5rem 0.9rem; }
-  .data-table th, .data-table td { padding: 0.45rem 0.4rem; font-size: 0.78rem; }
-  .section-body { padding: 0.75rem; }
-}
