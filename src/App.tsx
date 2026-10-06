@@ -5,13 +5,13 @@ import {
   Activity, Scale, Dumbbell, Flame, Target, User,
   LayoutDashboard, FileText, CalendarCheck, TrendingUp,
   PieChart as PieChartIcon, Droplets, ChevronDown, ChevronUp, Plus,
-  Menu, Moon, Sun, GitCompare, Lock, Unlock, X, KeyRound
+  Menu, Moon, Sun, GitCompare, Lock, Unlock, X, KeyRound, Download, ArrowUp, ArrowDown, Minus
 } from 'lucide-react';
 import { fitnessData } from './data';
 import {
   PieChart, Pie, Cell, ResponsiveContainer,
   Tooltip as RechartsTooltip, Legend, LineChart, Line,
-  XAxis, YAxis, CartesianGrid
+  XAxis, YAxis, CartesianGrid, AreaChart, Area
 } from 'recharts';
 import './index.css';
 
@@ -226,7 +226,6 @@ function ReportTab() {
   });
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [profileForm, setProfileForm] = useState(userProfile);
-  const [chartFilter, setChartFilter] = useState<'last10' | 'all'>('all');
 
 
 
@@ -238,25 +237,6 @@ function ReportTab() {
     await save({ personalInfo: profileForm });
   };
 
-  const exportData = () => {
-    if (progressData.length === 0) return alert("No data to export");
-    const esc = (v: unknown) => {
-      const t = String(v ?? '');
-      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
-    };
-    const keys = Array.from(new Set(progressData.flatMap((r: any) => Object.keys(r))));
-    const csv = [keys.join(','), ...progressData.map((r: any) => keys.map(k => esc(r[k])).join(','))].join('\n');
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'fitness_data.csv';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  const displayData = chartFilter === 'last10' ? progressData.slice(-10) : progressData;
   const latestReport = progressData[progressData.length - 1] || {};
   const currentScore = latestReport.score ?? personalInfo.score;
   const currentBodyAge = latestReport.bodyAge ?? personalInfo.bodyAge;
@@ -498,64 +478,174 @@ function ReportTab() {
         </div>
       </Section>
 
-      {/* ── 8. Progress Chart ── */}
-      <Section title="Progress Over Time" icon={<TrendingUp size={18} color="var(--accent)" />}>
-        <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
-          <div className="flex gap-2 segmented">
-            <button className={`tab-btn ${chartFilter === 'last10' ? 'active' : ''}`} onClick={() => setChartFilter('last10')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>Last 10 Reports</button>
-            <button className={`tab-btn ${chartFilter === 'all' ? 'active' : ''}`} onClick={() => setChartFilter('all')} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>All Time</button>
-          </div>
-          <button className="tab-btn" onClick={exportData} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: 'rgba(16,185,129,0.15)', color: 'var(--success)' }}>📥 Export CSV</button>
+    </div>
+  );
+}
+
+/* ─── PROGRESS TAB ───────────────────────────────────── */
+type Series = { key: string; name: string; color: string };
+
+function ChartCard({ title, icon, hint, data, series, area = false, unit = '' }: {
+  title: string; icon: string; hint: string; data: any[]; series: Series[]; area?: boolean; unit?: string;
+}) {
+  // Only draw series that have at least one value in the selected range
+  const active = series.filter(sr => data.some(d => d[sr.key] !== null && d[sr.key] !== undefined));
+  if (active.length === 0) return null;
+  const Chart: any = area ? AreaChart : LineChart;
+  return (
+    <div className="glass-panel chart-card">
+      <div className="chart-card-title">{icon} {title}{unit && <span className="metric-unit"> ({unit})</span>}</div>
+      <p className="chart-card-hint">{hint}</p>
+      <div className="line-wrap">
+        <ResponsiveContainer width="100%" height="100%">
+          <Chart data={data} margin={{ top: 10, right: 12, bottom: 0, left: -10 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" />
+            <XAxis dataKey="label" stroke="var(--text-muted)" tick={{ fontSize: 11 }} minTickGap={24} />
+            <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} domain={area ? [0, 'auto'] : ['auto', 'auto']} width={46} />
+            <RechartsTooltip
+              labelFormatter={(_l: any, p: any) => p?.[0]?.payload?.date ?? ''}
+              contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-main)' }}
+            />
+            <Legend iconSize={10} wrapperStyle={{ fontSize: '12px' }} />
+            {active.map(sr => area
+              ? <Area key={sr.key} type="monotone" dataKey={sr.key} name={sr.name} stroke={sr.color} fill={sr.color} fillOpacity={0.25} stackId="1" connectNulls />
+              : <Line key={sr.key} type="monotone" dataKey={sr.key} name={sr.name} stroke={sr.color} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 5 }} connectNulls />
+            )}
+          </Chart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
+
+function ProgressTab() {
+  const [progressData] = useLocalStorage<any[]>('progressData', []);
+  const [range, setRange] = useState<'5' | '10' | 'all'>('all');
+
+  const sorted = [...progressData].sort((a, b) => parseDateStr(a.date).getTime() - parseDateStr(b.date).getTime());
+  const shown = range === 'all' ? sorted : sorted.slice(-Number(range));
+  // Blank form fields are stored as '' - turn them into null so charts skip them
+  const data = shown.map(r => {
+    const row: any = { date: r.date, label: parseDateStr(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) };
+    Object.keys(r).forEach(k => {
+      if (k === 'date' || k === 'bodyType') return;
+      const n = r[k] === '' || r[k] === null || r[k] === undefined ? NaN : Number(r[k]);
+      row[k] = Number.isFinite(n) ? n : null;
+    });
+    return row;
+  });
+
+  const exportData = () => {
+    if (progressData.length === 0) return alert('No data to export');
+    const esc = (v: unknown) => {
+      const t = String(v ?? '');
+      return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+    };
+    const keys = Array.from(new Set(progressData.flatMap((r: any) => Object.keys(r))));
+    const csv = [keys.join(','), ...progressData.map((r: any) => keys.map(k => esc(r[k])).join(','))].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'fitness_data.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  if (progressData.length === 0) {
+    return (
+      <div className="tab-content fade-in">
+        <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
+          <TrendingUp size={48} style={{ margin: '0 auto 1rem', color: 'var(--accent)' }} />
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>No Progress Yet</h2>
+          <p style={{ color: 'var(--text-muted)' }}>Log a report to start seeing your trends here. 📝</p>
         </div>
+      </div>
+    );
+  }
 
-        {displayData.length > 0 ? (
-          <div className="line-wrap">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={displayData} margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--card-border)" />
-                <XAxis dataKey="date" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
-                <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
-                <RechartsTooltip 
-                  contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-main)' }} 
-                  itemSorter={(item) => {
-                    const order = ['Weight (KG)', 'Muscle (KG)', 'Fat (KG)', 'SMM (KG)', 'PBF (%)'];
-                    return order.indexOf(item.name as string);
-                  }}
-                />
-                <Line type="monotone" dataKey="weight" stroke="#f43f5e" name="Weight (KG)" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="muscle" stroke="#10b981" name="Muscle (KG)" strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="fat"    stroke="#f59e0b" name="Fat (KG)"    strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="smm"    stroke="#8b5cf6" name="SMM (KG)"    strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-                <Line type="monotone" dataKey="pbf"    stroke="#3b82f6" name="PBF (%)"     strokeWidth={2} dot={false} activeDot={{ r: 5 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        ) : (
-          <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No progress entries yet. Add one via <strong>New Report</strong> tab. 📝</p>
-        )}
+  // Summary: first vs latest value in the selected range. goodWhen = which direction is an improvement.
+  const summary: { key: string; label: string; unit: string; goodWhen: 'down' | 'up'; dec?: number }[] = [
+    { key: 'weight', label: 'Weight', unit: 'KG', goodWhen: 'down' },
+    { key: 'bmi', label: 'BMI', unit: '', goodWhen: 'down' },
+    { key: 'pbf', label: 'Body Fat %', unit: '%', goodWhen: 'down' },
+    { key: 'fat', label: 'Fat Mass', unit: 'KG', goodWhen: 'down' },
+    { key: 'muscle', label: 'Muscle Mass', unit: 'KG', goodWhen: 'up' },
+    { key: 'smm', label: 'Skeletal Muscle', unit: 'KG', goodWhen: 'up' },
+    { key: 'vfi', label: 'Visceral Fat', unit: '', goodWhen: 'down', dec: 0 },
+    { key: 'score', label: 'Fitness Score', unit: '', goodWhen: 'up', dec: 0 },
+    { key: 'bodyAge', label: 'Body Age', unit: 'yrs', goodWhen: 'down', dec: 0 },
+  ];
+  const valuesOf = (k: string) => data.map(d => d[k]).filter((v: any) => v !== null) as number[];
 
-        {/* ── Custom chart legend with explanations ── */}
-        <div className="chart-legend-grid">
-          {[
-            { color: '#f43f5e', label: 'Weight ⚖️', unit: 'KG', desc: 'Total body weight measured on the scale.' },
-            { color: '#10b981', label: 'Muscle 💪', unit: 'KG', desc: 'Total muscle mass — all muscle tissue in the body.' },
-            { color: '#f59e0b', label: 'Fat 🥓',    unit: 'KG', desc: 'Total fat mass — all stored fat in the body.' },
-            { color: '#8b5cf6', label: 'SMM 🏋️',   unit: 'KG', desc: 'Skeletal Muscle Mass — muscle attached to bones that grows with exercise.' },
-            { color: '#3b82f6', label: 'PBF 📊',    unit: '%',  desc: 'Percent Body Fat — fat as a percentage of total body weight. Lower is generally better.' },
-          ].map(item => (
-            <div key={item.label} className="chart-legend-item">
-              <div className="chart-legend-dot" style={{ background: item.color }} />
-              <div>
-                <div className="chart-legend-label" style={{ color: item.color }}>
-                  {item.label} <span className="metric-unit">{item.unit}</span>
-                </div>
-                <div className="chart-legend-desc">{item.desc}</div>
-              </div>
-            </div>
+  const S = (key: string, name: string, color: string): Series => ({ key, name, color });
+
+  return (
+    <div className="tab-content fade-in">
+      <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
+        <div className="flex gap-2 segmented">
+          {([['5', 'Last 5'], ['10', 'Last 10'], ['all', 'All Time']] as const).map(([v, l]) => (
+            <button key={v} className={`tab-btn ${range === v ? 'active' : ''}`} onClick={() => setRange(v)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>{l}</button>
           ))}
         </div>
-      </Section>
+        <button className="tab-btn" onClick={exportData} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', background: 'rgba(16,185,129,0.15)', color: 'var(--success)' }}>
+          <Download size={14} /> Export CSV
+        </button>
+      </div>
 
+      <p className="section-note">
+        Showing {data.length} report{data.length === 1 ? '' : 's'}
+        {data.length > 0 && <> · {data[0].date} → {data[data.length - 1].date}</>}
+      </p>
+
+      {/* Change summary */}
+      <div className="summary-grid mb-6">
+        {summary.map(m => {
+          const v = valuesOf(m.key);
+          if (v.length === 0) return null;
+          const first = v[0], last = v[v.length - 1], diff = last - first;
+          const dec = m.dec ?? 1;
+          const improving = diff === 0 ? null : (m.goodWhen === 'down' ? diff < 0 : diff > 0);
+          const color = improving === null ? 'var(--text-muted)' : improving ? 'var(--success)' : 'var(--warning)';
+          return (
+            <div key={m.key} className="glass-panel summary-card">
+              <div className="summary-label">{m.label}</div>
+              <div className="summary-value">{last.toFixed(dec)}<span className="metric-unit"> {m.unit}</span></div>
+              <div className="summary-delta" style={{ color }}>
+                {diff === 0 ? <Minus size={14} /> : diff > 0 ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
+                {diff === 0 ? 'No change' : `${Math.abs(diff).toFixed(dec)} ${m.unit}`}
+              </div>
+              <div className="summary-from">from {first.toFixed(dec)}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="charts-grid">
+        <ChartCard title="Weight" icon="⚖️" unit="KG" hint="Total body weight over time." data={data}
+          series={[S('weight', 'Weight', '#f43f5e')]} />
+        <ChartCard title="BMI" icon="📉" hint="Body Mass Index — healthy range is roughly 18.5 – 24.9." data={data}
+          series={[S('bmi', 'BMI', '#ec4899')]} />
+        <ChartCard title="Fat vs Muscle" icon="💪" unit="KG" hint="Goal: fat going down while muscle stays steady or rises." data={data}
+          series={[S('fat', 'Fat Mass', '#f59e0b'), S('muscle', 'Muscle Mass', '#10b981'), S('smm', 'Skeletal Muscle', '#8b5cf6')]} />
+        <ChartCard title="Body Fat %" icon="📊" hint="Percent body fat — fat as a share of total weight. Lower is generally better." data={data}
+          series={[S('pbf', 'PBF', '#3b82f6')]} />
+        <ChartCard title="Visceral Fat & Trunk Fat" icon="🥓" hint="Visceral fat index (organ fat) and trunk fat mass in KG." data={data}
+          series={[S('vfi', 'Visceral Fat Index', '#ef4444'), S('trunkFat', 'Trunk Fat (KG)', '#f97316')]} />
+        <ChartCard title="Fitness Score & Body Age" icon="⭐" hint="Higher score and lower body age mean better overall condition." data={data}
+          series={[S('score', 'Fitness Score', '#84cc16'), S('bodyAge', 'Body Age', '#06b6d4')]} />
+        <ChartCard title="Body Composition" icon="🧪" unit="KG" area hint="Stacked makeup of the body: water, protein, fat and minerals." data={data}
+          series={[S('water', 'Water', '#00f2fe'), S('protein', 'Protein', '#4facfe'), S('fat', 'Fat', '#f59e0b'), S('salt', 'Inorganic Salt', '#94a3b8')]} />
+        <ChartCard title="Metabolism & Lean Mass" icon="🔥" hint="BMR (Kcal/day) and Fat Free Mass (KG)." data={data}
+          series={[S('bmr', 'BMR (Kcal)', '#f43f5e'), S('ffm', 'Fat Free Mass (KG)', '#10b981')]} />
+        <ChartCard title="Hydration" icon="💧" hint="Body water % plus intracellular / extracellular water in litres." data={data}
+          series={[S('bodyWaterPct', 'Body Water %', '#00b4d8'), S('icw', 'Intracellular (L)', '#4facfe'), S('ecw', 'Extracellular (L)', '#a78bfa')]} />
+        <ChartCard title="Segmental Muscle" icon="🦾" unit="KG" hint="Muscle mass per body part." data={data}
+          series={[S('raMuscle', 'Right Arm', '#f43f5e'), S('laMuscle', 'Left Arm', '#f59e0b'), S('tMuscle', 'Trunk', '#10b981'), S('rlMuscle', 'Right Leg', '#3b82f6'), S('llMuscle', 'Left Leg', '#8b5cf6')]} />
+        <ChartCard title="Segmental Fat" icon="🦵" unit="KG" hint="Fat mass per body part." data={data}
+          series={[S('raFat', 'Right Arm', '#f43f5e'), S('laFat', 'Left Arm', '#f59e0b'), S('tFat', 'Trunk', '#10b981'), S('rlFat', 'Right Leg', '#3b82f6'), S('llFat', 'Left Leg', '#8b5cf6')]} />
+      </div>
     </div>
   );
 }
@@ -1004,14 +1094,16 @@ function CompareTab() {
 /* ─── APP ─────────────────────────────────────────────── */
 const NAV_ITEMS = [
   { id: 'report', label: 'Dashboard', Icon: LayoutDashboard },
-  { id: 'daily', label: 'Gym Calendar', Icon: CalendarCheck },
+  { id: 'daily', label: 'Calendar', Icon: CalendarCheck },
   { id: 'new-report', label: 'New Report', Icon: FileText },
+  { id: 'progress', label: 'Progress', Icon: TrendingUp },
   { id: 'compare', label: 'Compare', Icon: GitCompare },
 ];
 const TAB_TITLES: Record<string, [string, string]> = {
   report: ['Health Overview', 'Take control of your health today!'],
   daily: ['Gym Calendar', 'Track your daily gym attendance'],
   'new-report': ['New Report', 'Log your latest body composition metrics'],
+  progress: ['Progress Over Time', 'Track every metric across your reports'],
   compare: ['Compare Reports', 'Detailed side-by-side analysis'],
 };
 function App() {
@@ -1167,6 +1259,7 @@ function App() {
           {currentTab === 'report' && <ReportTab />}
           {currentTab === 'daily' && <DailyLogTab />}
           {currentTab === 'new-report' && <NewReportTab />}
+          {currentTab === 'progress' && <ProgressTab />}
           {currentTab === 'compare' && <CompareTab />}
         </div>
         </div>
