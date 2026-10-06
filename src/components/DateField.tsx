@@ -28,8 +28,10 @@ function digitsToIso(digits: string): string | null {
  * Type the date straight in. The box always shows the pattern "__ / __ / ____" and fills in as you
  * type digits (no separators needed). `value` and `onChange` use ISO dates (YYYY-MM-DD).
  */
-export function DateField({ value, onChange, allowFuture = false }: {
+export function DateField({ value, onChange, allowFuture = false, compact = false, label = 'Date, day month year' }: {
   value: string; onChange: (iso: string) => void; allowFuture?: boolean;
+  /** Just the box: no Today button or weekday line */
+  compact?: boolean; label?: string;
 }) {
   const [digits, setDigits] = useState(isoToDigits(value));
   const ref = useRef<HTMLInputElement>(null);
@@ -84,14 +86,16 @@ export function DateField({ value, onChange, allowFuture = false }: {
           onChange={handle}
           onFocus={placeCaret}
           onClick={placeCaret}
-          aria-label="Report date, day month year"
+          aria-label={label}
         />
-        <button type="button" className="tab-btn date-today"
-          onClick={() => { const t = toDateStr(new Date()); setDigits(isoToDigits(t)); onChange(t); }}>
-          Today
-        </button>
+        {!compact && (
+          <button type="button" className="tab-btn date-today"
+            onClick={() => { const t = toDateStr(new Date()); setDigits(isoToDigits(t)); onChange(t); }}>
+            Today
+          </button>
+        )}
       </div>
-      {weekday && <p className="section-note" style={{ margin: '0.2rem 0 0' }}>{weekday}</p>}
+      {!compact && weekday && <p className="section-note" style={{ margin: '0.2rem 0 0' }}>{weekday}</p>}
       {digits.length === 8 && problem && <p className="login-error">{problem}</p>}
     </div>
   );

@@ -362,3 +362,14 @@ button { touch-action: manipulation; }
 
 .section-header > svg, .section-title svg { flex-shrink: 0; }
 @media (max-width: 480px) { .import-hint { display: none; } }
+
+/* profile edit form: every field the same width, label above, no avatar squeezing the form */
+.hero-card.editing .hero-left { padding-right: 0; align-items: flex-start; }
+.hero-card.editing form { width: 100%; min-width: 0; }
+.hero-card.editing .input-field { width: 100%; min-width: 0; text-align: left; -webkit-appearance: none; appearance: none; height: 46px; }
+.hero-card.editing .field-label { margin-bottom: 0.25rem !important; }
+.hero-card.editing .grid { gap: 0.75rem; }
+@media (max-width: 768px) {
+  .hero-card.editing .avatar-circle { display: none; }
+  .hero-card.editing .hero-left { display: block; }
+}

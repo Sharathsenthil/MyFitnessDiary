@@ -11,6 +11,7 @@ import { toDateStr, parseDateStr } from '../lib/dates';
 import { useAuth } from '../lib/auth';
 import { Section } from '../components/Section';
 import { MetricRow } from '../components/MetricRow';
+import { DateField } from '../components/DateField';
 
 export function ReportTab() {
   const { isAdmin, save } = useAuth();
@@ -111,7 +112,7 @@ export function ReportTab() {
     <div className="tab-content fade-in">
 
       {/* ── Profile Hero ── */}
-      <div className={`hero-card mb-6 ${isAdmin && !isEditingProfile ? 'has-edit' : ''}`}>
+      <div className={`hero-card mb-6 ${isAdmin && !isEditingProfile ? 'has-edit' : ''} ${isEditingProfile ? 'editing' : ''}`}>
         {isAdmin && !isEditingProfile && (
           <button className="hero-edit" onClick={() => { setProfileForm(userProfile); setIsEditingProfile(true); }} aria-label="Edit profile">
             <Pencil size={14} /> Edit
@@ -129,8 +130,8 @@ export function ReportTab() {
                   <input className="input-field" value={profileForm.name} onChange={e => setProfileForm(f => ({ ...f, name: e.target.value }))} required />
                 </div>
                 <div>
-                  <label className="field-label" style={{ fontSize: '0.75rem', marginBottom: '0.1rem' }}>DOB</label>
-                  <input type="date" className="input-field" value={profileForm.dob} onChange={e => setProfileForm(f => ({ ...f, dob: e.target.value }))} required />
+                  <label className="field-label" style={{ fontSize: '0.75rem', marginBottom: '0.1rem' }}>Date of birth</label>
+                  <DateField compact label="Date of birth" allowFuture={false} value={profileForm.dob} onChange={v => setProfileForm(f => ({ ...f, dob: v }))} />
                 </div>
                 <div>
                   <label className="field-label" style={{ fontSize: '0.75rem', marginBottom: '0.1rem' }}>Height (cm)</label>
@@ -138,7 +139,7 @@ export function ReportTab() {
                 </div>
                 <div>
                   <label className="field-label" style={{ fontSize: '0.75rem', marginBottom: '0.1rem' }}>Gym Joined Date</label>
-                  <input type="date" className="input-field" value={profileForm.gymJoinedDate} onChange={e => setProfileForm(f => ({ ...f, gymJoinedDate: e.target.value }))} required />
+                  <DateField compact label="Gym joined date" value={profileForm.gymJoinedDate} onChange={v => setProfileForm(f => ({ ...f, gymJoinedDate: v }))} />
                 </div>
               </div>
               <div className="profile-actions">
