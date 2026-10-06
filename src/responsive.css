@@ -254,3 +254,13 @@ button { touch-action: manipulation; }
   .goal-grid .goal-arrow { transform: none; }
   .goal-stat-label { font-size: 0.72rem; }
 }
+
+/* touch targets and scrolling */
+.month-btn { min-width: 44px; min-height: 44px; justify-content: center; font-size: 1.4rem; line-height: 1; }
+.main-content { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.nav-item, .theme-toggle, .admin-btn, .sidebar-toggle { -webkit-tap-highlight-color: transparent; }
+@media (max-width: 768px) {
+  .nav-item, .sidebar.closed .nav-item { min-height: 48px; justify-content: center; }
+  .tab-btn { min-height: 40px; }
+  .section-header { min-height: 48px; }
+}

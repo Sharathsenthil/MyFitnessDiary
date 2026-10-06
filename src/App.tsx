@@ -7,6 +7,7 @@ import type { FitnessResponse, TabId } from './types';
 import { useLocalStorage } from './lib/storage';
 import { AuthContext, TOKEN_KEY } from './lib/auth';
 import { cleanRecords, sortRecords } from './lib/records';
+import { scrollToTop } from './lib/scroll';
 import { ReportTab } from './tabs/ReportTab';
 import { DailyLogTab } from './tabs/DailyLogTab';
 import { NewReportTab } from './tabs/NewReportTab';
@@ -140,6 +141,9 @@ function App() {
   // View-only users can't see the editor tab
   const navItems = NAV_ITEMS.filter(n => isAdmin || n.id !== 'new-report');
   const currentTab: TabId = !isAdmin && activeTab === 'new-report' ? 'report' : activeTab;
+
+  // Every tab starts at the top (the scroll position otherwise carries over from the previous tab)
+  useEffect(() => { scrollToTop(false); }, [currentTab]);
 
   return (
     <AuthContext.Provider value={{ isAdmin, save }}>

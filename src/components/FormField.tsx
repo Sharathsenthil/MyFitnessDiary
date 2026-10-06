@@ -19,6 +19,7 @@ export function FormField({ label, fieldKey, form, set, step = '0.1', required =
       <input
         type="number"
         step={step}
+        inputMode="decimal"
         className="input-field"
         value={form[fieldKey] ?? ''}
         onChange={e => set(fieldKey, e.target.value)}

@@ -94,9 +94,9 @@ export function DailyLogTab() {
       <div className="glass-panel mb-6">
         {/* Month nav */}
         <div className="flex justify-between items-center mb-4">
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="tab-btn" style={{ padding: '0.4rem 0.9rem' }}>‹</button>
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="tab-btn month-btn" aria-label="Previous month">‹</button>
           <h2 style={{ fontSize: '1.2rem', fontWeight: 700 }}>{currentMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h2>
-          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="tab-btn" style={{ padding: '0.4rem 0.9rem' }}>›</button>
+          <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1))} className="tab-btn month-btn" aria-label="Next month">›</button>
         </div>
 
         {/* Attendance summary */}

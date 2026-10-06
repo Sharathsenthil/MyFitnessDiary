@@ -96,7 +96,9 @@ body {
   padding: 0.85rem;
   justify-content: center;
 }
-.nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+@media (hover: hover) {
+  .nav-item:hover { color: white; background: rgba(255,255,255,0.05); }
+}
 .nav-item.active { background: white; color: #111827; font-weight: 600; }
 
 .main-content {
@@ -119,9 +121,11 @@ body {
   animation: fadeInUp 0.6s ease-out backwards;
   box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
 }
-.glass-panel:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+@media (hover: hover) {
+  .glass-panel:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08);
+  }
 }
 
 /* ── Hero Card ───────────────────────── */
@@ -169,7 +173,9 @@ body {
   font-size: 0.95rem; font-weight: 600;
   transition: background 0.2s;
 }
-.section-header:hover { background: var(--hover-bg); }
+@media (hover: hover) {
+  .section-header:hover { background: var(--hover-bg); }
+}
 .section-title { display: flex; align-items: center; gap: 0.6rem; }
 .section-body  { padding: 1rem 1.25rem; }
 .section-note  { font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.6rem; }
@@ -212,7 +218,9 @@ body {
   position: relative;
 }
 .metric-row:last-child td { border-bottom: none; }
-.metric-row:hover td { background: var(--hover-bg); }
+@media (hover: hover) {
+  .metric-row:hover td { background: var(--hover-bg); }
+}
 .metric-value { color: var(--text-main) !important; font-weight: 600; }
 .metric-unit  { font-size: 0.75rem; color: var(--text-muted); margin-left: 2px; font-weight: 400; }
 .metric-range { color: var(--text-muted); font-size: 0.78rem; }
@@ -345,7 +353,9 @@ body {
   transition: all 0.25s ease;
   white-space: nowrap;
 }
-.tab-btn:hover { color: var(--text-main); background: var(--hover-bg); }
+@media (hover: hover) {
+  .tab-btn:hover { color: var(--text-main); background: var(--hover-bg); }
+}
 .tab-btn.active { background: var(--accent); color: var(--accent-text); box-shadow: 0 4px 14px rgba(203,245,92,0.25); font-weight: 600; }
 
 /* ── Inputs ──────────────────────────── */
@@ -379,7 +389,9 @@ body {
   transition: opacity 0.25s ease, transform 0.25s ease;
   letter-spacing: 0.02em;
 }
-.submit-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+@media (hover: hover) {
+  .submit-btn:hover { opacity: 0.9; transform: translateY(-2px); }
+}
 
 /* ── Panel header ────────────────────── */
 .panel-header {
@@ -444,8 +456,10 @@ body {
   /* Must create its own stacking context to escape table */
   z-index: 1;
 }
-.tooltip-container:hover {
-  z-index: 9999;
+@media (hover: hover) {
+  .tooltip-container:hover {
+    z-index: 9999;
+  }
 }
 .tooltip-text {
   visibility: hidden;
@@ -470,7 +484,9 @@ body {
   white-space: normal;
   line-height: 1.45;
 }
-.tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+@media (hover: hover) {
+  .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+}
 
 /* ── Animations ──────────────────────── */
 @keyframes fadeInUp {
@@ -533,7 +549,9 @@ body {
   border: 1px solid var(--card-border);
   transition: background 0.2s;
 }
-.chart-legend-item:hover { background: var(--hover-bg); }
+@media (hover: hover) {
+  .chart-legend-item:hover { background: var(--hover-bg); }
+}
 .chart-legend-dot {
   width: 10px;
   height: 10px;

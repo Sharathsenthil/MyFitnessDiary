@@ -6,9 +6,12 @@ import { NUMERIC_KEYS, type NumericKey, type ReportForm, type ReportRecord } fro
 import { useLocalStorage } from '../lib/storage';
 import { parseDateStr, toDateStr } from '../lib/dates';
 import { useAuth } from '../lib/auth';
+import { scrollToTop } from '../lib/scroll';
 import { cleanRecord, upsertRecords } from '../lib/records';
 import { FormField } from '../components/FormField';
 import { ImportPanel } from '../components/ImportPanel';
+
+const isTouch = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
 
 export function NewReportTab() {
   const { save } = useAuth();
@@ -27,7 +30,7 @@ export function NewReportTab() {
   const flash = (msg: string) => {
     setShowSuccess(msg);
     setTimeout(() => setShowSuccess(''), 3500);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -51,7 +54,7 @@ export function NewReportTab() {
 
   const handleEdit = (record: ReportRecord) => {
     setForm(toForm(record));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    scrollToTop();
   };
 
   const handleImportOne = (record: ReportRecord) => {
@@ -89,7 +92,10 @@ export function NewReportTab() {
                 selected={form.date ? parseDateStr(form.date) : new Date()} 
                 onChange={(d: Date | null) => d && set('date', toDateStr(d))} 
                 className="input-field" 
-                dateFormat="yyyy-MM-dd" 
+                dateFormat="yyyy-MM-dd"
+                withPortal={isTouch}
+                customInput={<input className="input-field" inputMode={isTouch ? 'none' : undefined} />}
+                maxDate={new Date()} 
                 required 
               />
             </div>
