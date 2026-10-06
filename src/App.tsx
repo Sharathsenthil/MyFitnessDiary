@@ -495,7 +495,7 @@ function ChartCard({ title, icon, hint, data, series, area = false, unit = '' }:
   return (
     <div className="glass-panel chart-card">
       <div className="chart-card-title">{icon} {title}{unit && <span className="metric-unit"> ({unit})</span>}</div>
-      <p className="chart-card-hint">{hint}</p>
+      <p className="chart-card-hint">{hint}{data.length === 1 && ' · Add more reports to see a trend line.'}</p>
       <div className="line-wrap">
         <ResponsiveContainer width="100%" height="100%">
           <Chart data={data} margin={{ top: 10, right: 12, bottom: 0, left: -10 }}>
@@ -504,12 +504,15 @@ function ChartCard({ title, icon, hint, data, series, area = false, unit = '' }:
             <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} domain={area ? [0, 'auto'] : ['auto', 'auto']} width={46} />
             <RechartsTooltip
               labelFormatter={(_l: any, p: any) => p?.[0]?.payload?.date ?? ''}
-              contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-main)' }}
+              contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-main)', padding: '6px 10px', fontSize: 12 }}
+              labelStyle={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}
+              itemStyle={{ fontSize: 12, padding: '1px 0' }}
+              wrapperStyle={{ zIndex: 10 }}
             />
-            <Legend iconSize={10} wrapperStyle={{ fontSize: '12px' }} />
+            <Legend iconSize={8} wrapperStyle={{ fontSize: '12px' }} />
             {active.map(sr => area
               ? <Area key={sr.key} type="monotone" dataKey={sr.key} name={sr.name} stroke={sr.color} fill={sr.color} fillOpacity={0.25} stackId="1" connectNulls />
-              : <Line key={sr.key} type="monotone" dataKey={sr.key} name={sr.name} stroke={sr.color} strokeWidth={2} dot={{ r: 2 }} activeDot={{ r: 5 }} connectNulls />
+              : <Line key={sr.key} type="monotone" dataKey={sr.key} name={sr.name} stroke={sr.color} strokeWidth={2} dot={data.length > 12 ? false : { r: 2 }} activeDot={{ r: 4 }} connectNulls />
             )}
           </Chart>
         </ResponsiveContainer>
