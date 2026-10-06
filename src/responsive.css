@@ -38,7 +38,6 @@ button { touch-action: manipulation; }
 .line-wrap { height: 320px; }
 .segmented { background: var(--panel-bg); padding: 0.2rem; border-radius: 10px; }
 .attendance-alltime { border-left: 1px solid var(--card-border); padding-left: 1.25rem; }
-.react-datepicker-wrapper { width: 100%; }
 .calendar-day:focus-visible, .nav-item:focus-visible, .tab-btn:focus-visible {
   outline: 2px solid var(--accent); outline-offset: 2px;
 }
@@ -106,7 +105,6 @@ button { touch-action: manipulation; }
   .data-table th, .data-table td { padding: 0.45rem 0.4rem; font-size: 0.78rem; }
   .data-table { width: 100%; table-layout: auto; }
   .data-table .col-range, .data-table .metric-range { display: none; }
-  .data-table td, .data-table th { overflow-wrap: anywhere; }
   .history-table .metric-unit { display: none; }
   .history-table .tab-btn { padding: 0.3rem 0.5rem !important; }
   .section-body { padding: 0.75rem; }
@@ -270,3 +268,97 @@ button { touch-action: manipulation; }
 .legend-count { font-size: 1.4rem; font-weight: 700; line-height: 1.2; color: var(--text-main); }
 .legend-tap { font-size: 0.72rem; color: var(--text-muted); }
 .calendar-hint { font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 0.9rem; }
+
+/* profile card: identity on the left, score tiles on the right, Edit pinned top-right */
+.hero-card { position: relative; align-items: stretch; gap: 1.25rem; }
+.hero-left { align-items: center; min-width: 0; padding-right: 4.5rem; }
+.hero-id { font-size: 1.35rem; line-height: 1.2; margin-bottom: 0.4rem; overflow-wrap: anywhere; }
+.hero-sub { margin-top: 0; gap: 0.4rem; }
+.hero-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem; white-space: nowrap;
+  padding: 0.2rem 0.65rem; border-radius: 9999px; font-size: 0.8rem; font-weight: 500;
+  background: var(--panel-bg); border: 1px solid var(--card-border); color: var(--text-muted);
+}
+.hero-edit {
+  position: absolute; top: 0.85rem; right: 0.85rem;
+  display: inline-flex; align-items: center; gap: 0.3rem; min-height: 32px;
+  padding: 0.25rem 0.75rem; border-radius: 9999px; cursor: pointer;
+  background: var(--panel-bg); border: 1px solid var(--card-border); color: var(--text-muted);
+  font-family: inherit; font-size: 0.8rem; font-weight: 600;
+}
+@media (hover: hover) { .hero-edit:hover { color: var(--text-main); background: var(--hover-bg); } }
+.hero-scores { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.6rem; align-self: center; }
+.score-pill {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3rem;
+  padding: 0.7rem 1rem; min-width: 110px; border-radius: 14px;
+  background: var(--panel-bg); border: 1px solid var(--card-border);
+}
+.score-label { margin: 0; font-size: 0.72rem; white-space: nowrap; }
+.score-value { display: flex; align-items: center; justify-content: center; min-height: 1.9rem; font-size: 1.5rem; }
+@media (max-width: 768px) {
+  .hero-card { gap: 1rem; }
+  .hero-left { padding-right: 4rem; align-items: flex-start; }
+  .hero-scores { width: 100%; gap: 0.5rem; }
+  .score-pill { min-width: 0; padding: 0.6rem 0.4rem; }
+  .score-label { font-size: 0.68rem; }
+}
+
+/* wide screens: leave a row above the score tiles for the Edit button instead of overlapping them */
+@media (min-width: 769px) {
+  .hero-card.has-edit { padding-top: 3.1rem; }
+  .hero-card.has-edit .hero-left { padding-right: 0; }
+}
+
+.profile-actions { display: flex; gap: 0.5rem; margin-top: 0.4rem; }
+.profile-actions .submit-btn { flex: 1; }
+.profile-cancel { border: 1px solid var(--card-border); justify-content: center; min-width: 90px; }
+
+/* native date picker icon visible on dark backgrounds */
+.dark input[type="date"] { color-scheme: dark; }
+
+/* typed date field */
+.date-field { display: flex; gap: 0.5rem; align-items: stretch; }
+.date-field .input-field { flex: 1; }
+.date-today { border: 1px solid var(--card-border); justify-content: center; padding: 0 1rem; }
+
+/* fill-in date mask: __ / __ / ____ */
+.date-mask { font-variant-numeric: tabular-nums; letter-spacing: 0.08em; font-size: 1.1rem; }
+.date-mask.is-empty { color: var(--text-muted); }
+
+/* ── Short text never wraps onto a second line ── */
+.badge, .tab-btn, .admin-btn, .submit-btn, .score-label, .nav-label, .legend-name, .legend-tap,
+.summary-label, .summary-delta, .summary-from, .hero-chip, .goal-label, .goal-stat-label,
+.goal-stat-value, .goal-num, .calendar-header-day, .data-table th, .nowrap,
+.compare-row > div, .metric-value, .metric-range { white-space: nowrap; }
+.section-title, .panel-title, .chart-card-title, .insight-title, .page-title, label.field-label {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.section-header { gap: 0.75rem; }
+.section-header .section-title { flex: 1 1 auto; }
+.import-hint { font-size: 0.8rem; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; }
+.hide-mobile { display: inline; }
+.compare-label { overflow: hidden; text-overflow: ellipsis; }
+.hero-id { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: clamp(1.1rem, 5.2vw, 1.35rem); }
+.hero-left > div { min-width: 0; }
+.page-header > div:first-child { min-width: 0; }
+@media (max-width: 768px) {
+  .hide-mobile, .import-hint-long { display: none; }
+  .page-title { font-size: clamp(1.15rem, 6vw, 1.4rem); }
+  .history-table th, .history-table td { padding-left: 0.3rem; padding-right: 0.3rem; }
+  .compare-row { grid-template-columns: 1.5fr 1fr 1fr 1fr; }
+}
+@media (max-width: 400px) {
+  .data-table th, .data-table td { font-size: 0.74rem; padding: 0.4rem 0.3rem; }
+  .goal-stat-label { font-size: 0.66rem; }
+  .goal-stat-value { font-size: 0.9rem; }
+  .summary-label, .streak-card .summary-label { font-size: 0.7rem; letter-spacing: 0; }
+  .compare-row { font-size: 0.74rem; gap: 0.3rem; }
+  .import-hint { display: none; }
+}
+
+@media (max-width: 380px) { .history-table .col-pbf { display: none; } }
+
+@media (max-width: 340px) { .history-table th, .history-table td { font-size: 0.66rem; padding: 0.3rem 0.15rem; } .history-table .tab-btn { padding: 0.25rem 0.35rem !important; } }
+
+.section-header > svg, .section-title svg { flex-shrink: 0; }
+@media (max-width: 480px) { .import-hint { display: none; } }

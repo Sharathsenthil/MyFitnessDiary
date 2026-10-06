@@ -46,7 +46,7 @@ export function ImportPanel({ onFillForm, onImportMany }: {
     <div className="import-panel">
       <button type="button" className="section-header" onClick={() => setOpen(o => !o)} style={{ borderRadius: open ? '14px 14px 0 0' : 14 }}>
         <span className="section-title"><Upload size={18} color="var(--accent)" /> Import from scanner report</span>
-        <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{open ? 'Hide' : 'CSV · JSON · pasted text'}</span>
+        <span className="import-hint">{open ? 'Hide' : 'CSV · JSON · text'}</span>
       </button>
 
       {open && (

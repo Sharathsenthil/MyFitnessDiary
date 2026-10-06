@@ -1,6 +1,4 @@
 import { useState, type FormEvent } from 'react';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
 import { Plus, TrendingUp } from 'lucide-react';
 import { NUMERIC_KEYS, type NumericKey, type ReportForm, type ReportRecord } from '../types';
 import { useLocalStorage } from '../lib/storage';
@@ -9,9 +7,14 @@ import { useAuth } from '../lib/auth';
 import { scrollToTop } from '../lib/scroll';
 import { cleanRecord, upsertRecords } from '../lib/records';
 import { FormField } from '../components/FormField';
+import { DateField } from '../components/DateField';
 import { ImportPanel } from '../components/ImportPanel';
 
-const isTouch = typeof window !== 'undefined' && window.matchMedia('(hover: none)').matches;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const shortDate = (iso: string) => {
+  const d = parseDateStr(iso);
+  return `${String(d.getDate()).padStart(2, '0')} ${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`;
+};
 
 export function NewReportTab() {
   const { save } = useAuth();
@@ -87,17 +90,8 @@ export function NewReportTab() {
             {/* Date */}
             <div className="form-section-header">🗓 Report Date</div>
             <div>
-              <label className="field-label">Date (Editing this overrides the record for this date)</label>
-              <DatePicker 
-                selected={form.date ? parseDateStr(form.date) : new Date()} 
-                onChange={(d: Date | null) => d && set('date', toDateStr(d))} 
-                className="input-field" 
-                dateFormat="yyyy-MM-dd"
-                withPortal={isTouch}
-                customInput={<input className="input-field" inputMode={isTouch ? 'none' : undefined} />}
-                maxDate={new Date()} 
-                required 
-              />
+              <label className="field-label">Report date (DD / MM / YYYY)</label>
+              <DateField value={form.date} onChange={d => set('date', d)} />
             </div>
 
             {/* Overall Summary */}
@@ -210,21 +204,21 @@ export function NewReportTab() {
                     <th>Weight</th>
                     <th>Fat</th>
                     <th>Muscle</th>
-                    <th>PBF%</th>
-                    <th style={{ textAlign: 'right' }}>Actions</th>
+                    <th className="col-pbf">PBF%</th>
+                    <th style={{ textAlign: 'right' }}>Edit</th>
                   </tr>
                 </thead>
                 <tbody>
                   {[...progressData].reverse().map(r => (
                     <tr key={r.date} className="metric-row">
-                      <td>{r.date}</td>
+                      <td className="nowrap">{shortDate(r.date)}</td>
                       <td className="metric-value">{r.weight} <span className="metric-unit">KG</span></td>
                       <td className="metric-value" style={{ color: 'var(--warning)' }}>{r.fat} <span className="metric-unit">KG</span></td>
                       <td className="metric-value" style={{ color: 'var(--success)' }}>{r.muscle} <span className="metric-unit">KG</span></td>
-                      <td className="metric-value" style={{ color: '#3b82f6' }}>{r.pbf ?? '–'} <span className="metric-unit">%</span></td>
+                      <td className="metric-value col-pbf" style={{ color: '#3b82f6' }}>{r.pbf ?? '–'} <span className="metric-unit">%</span></td>
                       <td style={{ textAlign: 'right' }}>
                         <button onClick={() => handleEdit(r)} className="tab-btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>
-                          ✏️ Edit
+                          ✏️<span className="hide-mobile"> Edit</span>
                         </button>
                       </td>
                     </tr>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   Activity, Scale, Dumbbell, Flame, Target, User,
-  PieChart as PieChartIcon, Droplets,
+  PieChart as PieChartIcon, Droplets, Pencil,
 } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend } from 'recharts';
 import { fitnessData } from '../data';
@@ -111,7 +111,12 @@ export function ReportTab() {
     <div className="tab-content fade-in">
 
       {/* ── Profile Hero ── */}
-      <div className="hero-card mb-6">
+      <div className={`hero-card mb-6 ${isAdmin && !isEditingProfile ? 'has-edit' : ''}`}>
+        {isAdmin && !isEditingProfile && (
+          <button className="hero-edit" onClick={() => { setProfileForm(userProfile); setIsEditingProfile(true); }} aria-label="Edit profile">
+            <Pencil size={14} /> Edit
+          </button>
+        )}
         <div className="hero-left" style={{ width: isEditingProfile ? '100%' : 'auto' }}>
           <div className="avatar-circle">
             <User size={36} color="white" />
@@ -136,22 +141,19 @@ export function ReportTab() {
                   <input type="date" className="input-field" value={profileForm.gymJoinedDate} onChange={e => setProfileForm(f => ({ ...f, gymJoinedDate: e.target.value }))} required />
                 </div>
               </div>
-              <div className="flex gap-2 mt-1 flex-wrap">
-                <button type="submit" className="submit-btn" style={{ padding: '0.4rem', fontSize: '0.9rem' }}>💾 Save</button>
-                <button type="button" className="tab-btn" onClick={() => { setIsEditingProfile(false); setProfileForm(userProfile); }}>Cancel</button>
+              <div className="profile-actions">
+                <button type="submit" className="submit-btn" style={{ padding: '0.5rem', fontSize: '0.9rem' }}>💾 Save</button>
+                <button type="button" className="tab-btn profile-cancel" onClick={() => { setIsEditingProfile(false); setProfileForm(userProfile); }}>Cancel</button>
               </div>
             </form>
           ) : (
             <div>
-              <h2 className="hero-id" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                {userProfile.name}
-                {isAdmin && <button onClick={() => setIsEditingProfile(true)} className="tab-btn" style={{ padding: '0.2rem 0.5rem', fontSize: '0.8rem' }}>✏️ Edit</button>}
-              </h2>
-              <p className="hero-sub">
-                <span>🎂 {Math.floor((new Date().getTime() - parseDateStr(userProfile.dob).getTime()) / 31557600000)} yrs</span>
-                <span>📏 {userProfile.height} cm</span>
-                <span>🏋️ Joined {userProfile.gymJoinedDate}</span>
-              </p>
+              <h2 className="hero-id">{userProfile.name}</h2>
+              <div className="hero-sub">
+                <span className="hero-chip">🎂 {Math.floor((new Date().getTime() - parseDateStr(userProfile.dob).getTime()) / 31557600000)} yrs</span>
+                <span className="hero-chip">📏 {userProfile.height} cm</span>
+                <span className="hero-chip">🏋️ Joined {userProfile.gymJoinedDate}</span>
+              </div>
             </div>
           )}
         </div>
@@ -168,7 +170,7 @@ export function ReportTab() {
             <div className="score-pill">
               <div className="score-label">🏃 Body Type</div>
               <div className="score-value">
-                <span className={`badge ${String(currentBodyType).toLowerCase().includes('obese') ? 'badge-warning animate-shake' : 'badge-success'}`}>
+                <span className={`badge ${String(currentBodyType).toLowerCase().includes('obese') ? 'badge-warning' : 'badge-success'}`}>
                   {currentBodyType} {String(currentBodyType).toLowerCase().includes('obese') ? '⚠️' : '✓'}
                 </span>
               </div>
@@ -255,17 +257,17 @@ export function ReportTab() {
             </thead>
             <tbody>
               <MetricRow label="Muscle Mass" value={muscleAnalysis.muscle.value} unit="KG" min={muscleAnalysis.muscle.min} max={muscleAnalysis.muscle.max} tooltip="Total muscle in your body." />
-              <MetricRow label="Skeletal Muscle (SMM)" value={muscleAnalysis.smm.value} unit="KG" min={muscleAnalysis.smm.min} max={muscleAnalysis.smm.max} tooltip="Muscle attached to bones — grows with exercise." />
+              <MetricRow label="Skeletal Muscle" value={muscleAnalysis.smm.value} unit="KG" min={muscleAnalysis.smm.min} max={muscleAnalysis.smm.max} tooltip="SMM: muscle attached to bones — grows with exercise." />
               <MetricRow label="Protein Content" value={muscleAnalysis.protein.value} unit="KG" min={muscleAnalysis.protein.min} max={muscleAnalysis.protein.max} tooltip="Protein stored in muscle tissue." />
             </tbody>
           </table></div>
         </Section>
 
         {/* ── 5. Segmental Analysis ── */}
-        <Section title="Segmental Analysis 🦵" icon={<Activity size={18} color="var(--accent)" />}>
+        <Section title="Segmental Analysis 🦵 (KG)" icon={<Activity size={18} color="var(--accent)" />}>
           <div className="table-scroll"><table className="data-table">
             <thead>
-              <tr><th>Segment</th><th>💪 Muscle KG</th><th>🥓 Fat KG</th></tr>
+              <tr><th>Segment</th><th>💪 Muscle</th><th>🥓 Fat</th></tr>
             </thead>
             <tbody>
               {[

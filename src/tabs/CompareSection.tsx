@@ -13,21 +13,21 @@ export function CompareSection({ records }: { records: ReportRecord[] }) {
 
   // lowerIsBetter: a drop in this metric is an improvement
   const metrics: { label: string; key: NumericKey; lowerIsBetter?: boolean }[] = [
-    { label: 'Weight (kg)', key: 'weight', lowerIsBetter: true },
-    { label: 'Skeletal Muscle (kg)', key: 'smm' },
-    { label: 'Muscle Mass (kg)', key: 'muscle' },
-    { label: 'Body Fat Mass (kg)', key: 'fat', lowerIsBetter: true },
-    { label: 'Percent Body Fat (%)', key: 'pbf', lowerIsBetter: true },
+    { label: 'Weight', key: 'weight', lowerIsBetter: true },
+    { label: 'Skeletal Muscle', key: 'smm' },
+    { label: 'Muscle Mass', key: 'muscle' },
+    { label: 'Fat Mass', key: 'fat', lowerIsBetter: true },
+    { label: 'Body Fat %', key: 'pbf', lowerIsBetter: true },
     { label: 'BMI', key: 'bmi', lowerIsBetter: true },
-    { label: 'Visceral Fat Index', key: 'vfi', lowerIsBetter: true },
-    { label: 'Trunk Fat (kg)', key: 'trunkFat', lowerIsBetter: true },
-    { label: 'InBody Score', key: 'score' },
+    { label: 'Visceral Fat', key: 'vfi', lowerIsBetter: true },
+    { label: 'Trunk Fat', key: 'trunkFat', lowerIsBetter: true },
+    { label: 'Fitness Score', key: 'score' },
     { label: 'Body Age', key: 'bodyAge', lowerIsBetter: true },
-    { label: 'BMR (Kcal)', key: 'bmr' },
-    { label: 'Fat Free Mass (kg)', key: 'ffm' },
-    { label: 'Total Body Water (L)', key: 'water' },
-    { label: 'Protein (kg)', key: 'protein' },
-    { label: 'Inorganic Salt (kg)', key: 'salt' },
+    { label: 'BMR', key: 'bmr' },
+    { label: 'Fat Free Mass', key: 'ffm' },
+    { label: 'Body Water', key: 'water' },
+    { label: 'Protein', key: 'protein' },
+    { label: 'Salt', key: 'salt' },
   ];
 
   if (sorted.length < 2) {
