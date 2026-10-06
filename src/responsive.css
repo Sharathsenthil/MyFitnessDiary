@@ -191,3 +191,32 @@ button { touch-action: manipulation; }
   .chart-card-hint { font-size: 0.75rem; margin-bottom: 0.4rem; }
   .recharts-legend-item-text { font-size: 11px !important; }
 }
+
+/* import panel */
+.import-panel { margin-bottom: 1.25rem; border: 1px solid var(--card-border); border-radius: 14px; overflow: hidden; }
+.import-panel .section-header { border-bottom: none; }
+.import-body { padding: 1rem 1.25rem; border-top: 1px solid var(--card-border); }
+.import-textarea { resize: vertical; font-family: inherit; min-height: 110px; }
+.import-result { margin-top: 1rem; padding: 0.9rem 1rem; background: var(--panel-bg); border: 1px solid var(--card-border); border-radius: 12px; }
+.import-result p { margin-bottom: 0.4rem; }
+
+/* insights */
+.insight-list { list-style: none; display: grid; gap: 0.6rem; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.insight-item { display: flex; gap: 0.75rem; padding: 0.7rem 0.9rem; background: var(--panel-bg); border-radius: 12px; border-left: 4px solid var(--text-muted); min-width: 0; }
+.insight-icon { font-size: 1.3rem; line-height: 1.4; flex-shrink: 0; }
+.insight-title { font-weight: 700; font-size: 0.92rem; }
+.insight-text { font-size: 0.84rem; color: var(--text-muted); line-height: 1.45; }
+.insight-disclaimer { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.75rem; }
+.insights-panel:hover { transform: none; }
+
+/* streaks */
+.streak-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.75rem; }
+.streak-card { padding: 0.25rem 0.5rem; }
+.streak-card .summary-label { display: flex; align-items: center; gap: 0.35rem; }
+@media (max-width: 1024px) { .insight-list { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 768px) { .streak-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; } .streak-card .summary-value { font-size: 1.4rem; } }
+
+/* installed (standalone) app: respect notches / home indicator */
+@media (display-mode: standalone) {
+  .main-content { padding-top: max(1rem, env(safe-area-inset-top)); }
+}
