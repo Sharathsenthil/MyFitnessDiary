@@ -73,7 +73,7 @@ const useAuth = () => useContext(AuthContext);
 
 /* ─── Helpers ───────────────────────────────────────── */
 function statusInfo(value: number, min?: number, max?: number, isHighBad = false) {
-  if (!min || !max) return { label: '–', color: 'var(--text-muted)', badge: 'badge-neutral' };
+  if (min === undefined || max === undefined) return { label: '–', color: 'var(--text-muted)', badge: 'badge-neutral' };
   if (value > max) return isHighBad
     ? { label: 'High ⬆', color: 'var(--warning)', badge: 'badge-warning' }
     : { label: 'Above Normal', color: 'var(--success)', badge: 'badge-success' };
@@ -98,7 +98,7 @@ function MetricRow({ label, value, unit, min, max, isHighBad = false, tooltip = 
       <td className="metric-value" style={{ color }}>
         {value} <span className="metric-unit">{unit}</span>
       </td>
-      {(min && max) ? (
+      {(min !== undefined && max !== undefined) ? (
         <>
           <td className="metric-range">{min} – {max}</td>
           <td><span className={`badge ${badge}`}>{statusLabel}</span></td>
@@ -377,7 +377,7 @@ function ReportTab() {
             <tbody>
               <MetricRow label="Percent Body Fat" value={fatAnalysis.pbf.value} unit="%" min={fatAnalysis.pbf.min} max={fatAnalysis.pbf.max} isHighBad tooltip="PBF: % of total weight that is fat." />
               <MetricRow label="Trunk Fat Mass" value={fatAnalysis.trunkFatMass.value} unit="KG" min={fatAnalysis.trunkFatMass.min} max={fatAnalysis.trunkFatMass.max} isHighBad tooltip="Fat concentrated in the torso area." />
-              <MetricRow label="Visceral Fat Index" value={fatAnalysis.visceralFatIndex.value} unit="" min={fatAnalysis.visceralFatIndex.min} max={fatAnalysis.visceralFatIndex.max} isHighBad tooltip="Dangerous fat surrounding internal organs." />
+              <MetricRow label="Visceral Fat Index" value={fatAnalysis.visceralFatIndex.value} unit="" min={fatAnalysis.visceralFatIndex.min} max={fatAnalysis.visceralFatIndex.max} isHighBad tooltip="Dangerous fat surrounding internal organs. Healthy range: 1 – 10." />
             </tbody>
           </table></div>
         </Section>
@@ -646,6 +646,8 @@ function ProgressTab() {
         <ChartCard title="Segmental Fat" icon="🦵" unit="KG" hint="Fat mass per body part." data={data}
           series={[S('raFat', 'Right Arm', '#f43f5e'), S('laFat', 'Left Arm', '#f59e0b'), S('tFat', 'Trunk', '#10b981'), S('rlFat', 'Right Leg', '#3b82f6'), S('llFat', 'Left Leg', '#8b5cf6')]} />
       </div>
+
+      <CompareSection progressData={sorted} />
     </div>
   );
 }
@@ -1000,92 +1002,90 @@ function NewReportTab() {
   );
 }
 
-/* ─── COMPARE TAB ────────────────────────────────────────── */
-function CompareTab() {
-  const [progressData] = useLocalStorage<any[]>('progressData', []);
-  const [date1, setDate1] = useState(progressData.length > 1 ? progressData[progressData.length - 2].date : progressData[0]?.date || '');
-  const [date2, setDate2] = useState(progressData.length > 0 ? progressData[progressData.length - 1].date : '');
+/* ─── COMPARE SECTION (inside Progress tab) ──────────────── */
+function CompareSection({ progressData }: { progressData: any[] }) {
+  const sorted = [...progressData].sort((a, b) => parseDateStr(a.date).getTime() - parseDateStr(b.date).getTime());
+  const [date1, setDate1] = useState(sorted.length > 1 ? sorted[sorted.length - 2].date : sorted[0]?.date || '');
+  const [date2, setDate2] = useState(sorted.length > 0 ? sorted[sorted.length - 1].date : '');
 
-  const data1 = progressData.find(d => d.date === date1) || progressData[0];
-  const data2 = progressData.find(d => d.date === date2) || progressData[0];
+  const data1 = sorted.find(d => d.date === date1) || sorted[0];
+  const data2 = sorted.find(d => d.date === date2) || sorted[0];
 
+  // lowerIsBetter: a drop in this metric is an improvement
   const metrics = [
-    { label: 'Weight (kg)', key: 'weight' },
+    { label: 'Weight (kg)', key: 'weight', lowerIsBetter: true },
     { label: 'Skeletal Muscle (kg)', key: 'smm' },
-    { label: 'Body Fat Mass (kg)', key: 'fat' },
-    { label: 'Percent Body Fat (%)', key: 'pbf' },
-    { label: 'BMI', key: 'bmi' },
-    { label: 'Visceral Fat Index', key: 'vfi' },
+    { label: 'Muscle Mass (kg)', key: 'muscle' },
+    { label: 'Body Fat Mass (kg)', key: 'fat', lowerIsBetter: true },
+    { label: 'Percent Body Fat (%)', key: 'pbf', lowerIsBetter: true },
+    { label: 'BMI', key: 'bmi', lowerIsBetter: true },
+    { label: 'Visceral Fat Index', key: 'vfi', lowerIsBetter: true },
+    { label: 'Trunk Fat (kg)', key: 'trunkFat', lowerIsBetter: true },
     { label: 'InBody Score', key: 'score' },
+    { label: 'Body Age', key: 'bodyAge', lowerIsBetter: true },
+    { label: 'BMR (Kcal)', key: 'bmr' },
     { label: 'Fat Free Mass (kg)', key: 'ffm' },
     { label: 'Total Body Water (L)', key: 'water' },
     { label: 'Protein (kg)', key: 'protein' },
     { label: 'Inorganic Salt (kg)', key: 'salt' },
   ];
 
-  if (progressData.length < 2) {
+  if (sorted.length < 2) {
     return (
-      <div className="tab-content fade-in">
-        <div className="glass-panel" style={{ textAlign: 'center', padding: '4rem 2rem' }}>
-          <Activity size={48} style={{ margin: '0 auto 1rem', color: 'var(--accent)' }} />
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.5rem' }}>Not Enough Data</h2>
-          <p style={{ color: 'var(--text-muted)' }}>You need at least two logged reports to compare them. Go to "New Report" to log another entry!</p>
-        </div>
+      <div className="glass-panel mt-8" style={{ textAlign: 'center', padding: '2rem 1.5rem' }}>
+        <GitCompare size={36} style={{ margin: '0 auto 0.75rem', color: 'var(--accent)' }} />
+        <h2 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.4rem' }}>Compare Two Reports</h2>
+        <p style={{ color: 'var(--text-muted)' }}>Log at least two reports to compare them side by side.</p>
       </div>
     );
   }
 
   return (
-    <div className="tab-content fade-in">
-      <div className="glass-panel">
-        <div className="panel-header">
-          <div className="panel-title"><GitCompare size={18} /> ⚖️ Compare Reports</div>
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Analyze your progress over time</div>
-        </div>
+    <div className="glass-panel mt-8">
+      <div className="panel-header">
+        <div className="panel-title"><GitCompare size={18} /> ⚖️ Compare Two Reports</div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Pick any two dates</div>
+      </div>
 
-        <div className="compare-selects">
-          <select className="input-field" value={date1} onChange={e => setDate1(e.target.value)} style={{ flex: 1, cursor: 'pointer' }}>
-            {progressData.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
-          </select>
-          <div className="compare-vs">VS</div>
-          <select className="input-field" value={date2} onChange={e => setDate2(e.target.value)} style={{ flex: 1, cursor: 'pointer' }}>
-            {progressData.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
-          </select>
-        </div>
+      <div className="compare-selects">
+        <select className="input-field" value={date1} onChange={e => setDate1(e.target.value)}>
+          {sorted.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
+        </select>
+        <div className="compare-vs">VS</div>
+        <select className="input-field" value={date2} onChange={e => setDate2(e.target.value)}>
+          {sorted.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
+        </select>
+      </div>
 
-        <div className="compare-table">
-          <div className="compare-row compare-head">
-            <div>Metric</div>
-            <div style={{ textAlign: 'right' }}>{date1}</div>
-            <div style={{ textAlign: 'right' }}>{date2}</div>
-            <div style={{ textAlign: 'right' }}>Difference</div>
-          </div>
-          {metrics.map(m => {
-            const v1 = Number(data1[m.key] || 0);
-            const v2 = Number(data2[m.key] || 0);
-            const diff = v2 - v1;
-            const diffStr = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
-            let diffColor = 'var(--text-muted)';
-            if (diff !== 0) {
-              if (['fat', 'pbf', 'bmi', 'vfi'].includes(m.key)) {
-                diffColor = diff < 0 ? 'var(--success)' : 'var(--warning)';
-              } else {
-                diffColor = diff > 0 ? 'var(--success)' : 'var(--warning)';
-              }
-            }
-
-            return (
-              <div key={m.key} className="compare-row">
-                <div className="compare-label">{m.label}</div>
-                <div style={{ textAlign: 'right' }}>{v1.toFixed(1)}</div>
-                <div style={{ textAlign: 'right', fontWeight: 600, color: 'var(--text-main)' }}>{v2.toFixed(1)}</div>
-                <div style={{ textAlign: 'right', fontWeight: 700, color: diffColor }}>
-                  {diff !== 0 ? diffStr : '-'}
-                </div>
-              </div>
-            );
-          })}
+      <div className="compare-table">
+        <div className="compare-row compare-head">
+          <div>Metric</div>
+          <div>{date1}</div>
+          <div>{date2}</div>
+          <div>Change</div>
         </div>
+        {metrics.map(m => {
+          const raw1 = data1[m.key], raw2 = data2[m.key];
+          const has = (v: any) => v !== undefined && v !== null && v !== '' && Number.isFinite(Number(v));
+          if (!has(raw1) && !has(raw2)) return null;
+          const v1 = Number(raw1 || 0);
+          const v2 = Number(raw2 || 0);
+          const diff = v2 - v1;
+          const diffStr = diff > 0 ? `+${diff.toFixed(1)}` : diff.toFixed(1);
+          let diffColor = 'var(--text-muted)';
+          if (Math.abs(diff) > 0.0001) {
+            const improving = m.lowerIsBetter ? diff < 0 : diff > 0;
+            diffColor = improving ? 'var(--success)' : 'var(--warning)';
+          }
+          return (
+            <div key={m.key} className="compare-row">
+              <div className="compare-label">{m.label}</div>
+              <div>{v1.toFixed(1)}</div>
+              <div style={{ fontWeight: 600, color: 'var(--text-main)' }}>{v2.toFixed(1)}</div>
+              <div style={{ fontWeight: 700, color: diffColor }}>{Math.abs(diff) > 0.0001 ? diffStr : '-'}</div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -1097,14 +1097,12 @@ const NAV_ITEMS = [
   { id: 'daily', label: 'Calendar', Icon: CalendarCheck },
   { id: 'new-report', label: 'New Report', Icon: FileText },
   { id: 'progress', label: 'Progress', Icon: TrendingUp },
-  { id: 'compare', label: 'Compare', Icon: GitCompare },
 ];
 const TAB_TITLES: Record<string, [string, string]> = {
   report: ['Health Overview', 'Take control of your health today!'],
   daily: ['Gym Calendar', 'Track your daily gym attendance'],
   'new-report': ['New Report', 'Log your latest body composition metrics'],
-  progress: ['Progress Over Time', 'Track every metric across your reports'],
-  compare: ['Compare Reports', 'Detailed side-by-side analysis'],
+  progress: ['Progress', 'Trends across your reports, plus side-by-side comparison'],
 };
 function App() {
   const [activeTab, setActiveTab] = useState('report');
@@ -1260,7 +1258,6 @@ function App() {
           {currentTab === 'daily' && <DailyLogTab />}
           {currentTab === 'new-report' && <NewReportTab />}
           {currentTab === 'progress' && <ProgressTab />}
-          {currentTab === 'compare' && <CompareTab />}
         </div>
         </div>
       </div>

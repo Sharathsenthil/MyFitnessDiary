@@ -25,7 +25,7 @@ export const fitnessData = {
     fat: { value: 17.1, min: 7.9, max: 15.8, unit: "KG" },
     trunkFatMass: { value: 8.6, min: 4.0, max: 7.9, unit: "KG" },
     pbf: { value: 21.35, min: 10, max: 20 },
-    visceralFatIndex: { value: 8.4, min: 0, max: 10 }
+    visceralFatIndex: { value: 8.4, min: 1, max: 10 }
   },
   muscleAnalysis: {
     muscle: { value: 58.7, min: 46.9, max: 57.5, unit: "KG" },
