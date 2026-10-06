@@ -336,7 +336,7 @@ function ReportTab() {
       <Section title="Core Body Metrics" icon={<Scale size={18} color="var(--accent)" />}>
         <div className="table-scroll"><table className="data-table">
           <thead>
-            <tr><th>Metric</th><th>Value</th><th>Normal Range</th><th>Status</th></tr>
+            <tr><th>Metric</th><th>Value</th><th className="col-range">Normal Range</th><th>Status</th></tr>
           </thead>
           <tbody>
             <MetricRow label="⚖️ Weight" value={bodyComponent.weight.value} unit="KG" min={bodyComponent.weight.min} max={bodyComponent.weight.max} isHighBad tooltip="Your total body weight." />
@@ -353,7 +353,7 @@ function ReportTab() {
         <div className="two-col-layout">
           <div className="table-scroll"><table className="data-table">
             <thead>
-              <tr><th>Component</th><th>Value</th><th>Normal Range</th><th>Status</th></tr>
+              <tr><th>Component</th><th>Value</th><th className="col-range">Normal Range</th><th>Status</th></tr>
             </thead>
             <tbody>
               <MetricRow label="💧 Water" value={bodyComponent.water.value} unit="KG" min={bodyComponent.water.min} max={bodyComponent.water.max} tooltip="Total body water." />
@@ -392,7 +392,7 @@ function ReportTab() {
         <Section title="Fat Analysis 🥓" icon={<Flame size={18} color="var(--warning)" />}>
           <div className="table-scroll"><table className="data-table">
             <thead>
-              <tr><th>Metric</th><th>Value</th><th>Range</th><th>Status</th></tr>
+              <tr><th>Metric</th><th>Value</th><th className="col-range">Range</th><th>Status</th></tr>
             </thead>
             <tbody>
               <MetricRow label="Percent Body Fat" value={fatAnalysis.pbf.value} unit="%" min={fatAnalysis.pbf.min} max={fatAnalysis.pbf.max} isHighBad tooltip="PBF: % of total weight that is fat." />
@@ -406,7 +406,7 @@ function ReportTab() {
         <Section title="Muscle Analysis 💪" icon={<Dumbbell size={18} color="var(--success)" />}>
           <div className="table-scroll"><table className="data-table">
             <thead>
-              <tr><th>Metric</th><th>Value</th><th>Range</th><th>Status</th></tr>
+              <tr><th>Metric</th><th>Value</th><th className="col-range">Range</th><th>Status</th></tr>
             </thead>
             <tbody>
               <MetricRow label="Muscle Mass" value={muscleAnalysis.muscle.value} unit="KG" min={muscleAnalysis.muscle.min} max={muscleAnalysis.muscle.max} tooltip="Total muscle in your body." />
@@ -444,7 +444,7 @@ function ReportTab() {
         <Section title="Hydration & Edema 💧" icon={<Droplets size={18} color="#00f2fe" />}>
           <div className="table-scroll"><table className="data-table">
             <thead>
-              <tr><th>Metric</th><th>Value</th><th>Range</th><th>Status</th></tr>
+              <tr><th>Metric</th><th>Value</th><th className="col-range">Range</th><th>Status</th></tr>
             </thead>
             <tbody>
               <tr className="metric-row">
@@ -873,8 +873,8 @@ function NewReportTab() {
             <div className="panel-header">
               <div className="panel-title"><TrendingUp size={18} /> 📅 History</div>
             </div>
-            <div style={{ overflowX: 'auto' }}>
-              <div className="table-scroll"><table className="data-table">
+            <div>
+              <div className="table-scroll"><table className="data-table history-table">
                 <thead>
                   <tr>
                     <th>Date</th>

@@ -177,7 +177,7 @@ body {
 /* 2-column section grid to halve scrolling */
 .sections-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
   align-items: start;
 }
@@ -233,7 +233,7 @@ body {
 /* ── Two-col layout ─────────────────── */
 .two-col-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: minmax(0, 1fr) 280px;
   gap: 1.5rem;
   align-items: start;
 }
