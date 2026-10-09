@@ -1,6 +1,9 @@
-import { useId, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useId, useMemo, useState, type ReactNode } from 'react';
 import type { Gender, MuscleId } from '../types';
 import type { MuscleTotal } from '../lib/workouts';
+
+// The 3D viewer (three.js) is loaded only when the body is shown
+const Body3D = lazy(() => import('./Body3D'));
 
 /*
  * Holographic body, front and back, male or female. The outline is one smooth contour built from the
@@ -158,14 +161,26 @@ export function BodyMap({ muscles, max, gender }: { muscles: MuscleTotal[]; max:
   const byId = new Map(muscles.map(m => [m.id, m]));
   const active = hover ?? selected;
   const info = active ? byId.get(active) : null;
-  const pick = (m: MuscleId) => setSelected(s => (s === m ? null : m));
+  const pick = (m: MuscleId | null) => setSelected(s => (m === null || s === m ? null : m));
+  // Falls back to the flat drawing when WebGL or the model file is unavailable
+  const [flat, setFlat] = useState(false);
+  const heat = useMemo(
+    () => Object.fromEntries(muscles.map(m => [m.id, m.hits > 0 && max > 0 ? m.hits / max : -1])) as Record<MuscleId, number>,
+    [muscles, max],
+  );
 
   return (
     <div className="holo">
-      <div className="body-map">
-        <Figure title="Front" gender={gender} shapes={FRONT} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
-        <Figure title="Back" gender={gender} shapes={BACK} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
-      </div>
+      {flat ? (
+        <div className="body-map">
+          <Figure title="Front" gender={gender} shapes={FRONT} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
+          <Figure title="Back" gender={gender} shapes={BACK} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
+        </div>
+      ) : (
+        <Suspense fallback={<div className="holo3d"><div className="holo3d-loading">Loading 3D body…</div></div>}>
+          <Body3D gender={gender} heat={heat} active={active} onHover={setHover} onPick={pick} onFail={() => setFlat(true)} />
+        </Suspense>
+      )}
 
       <div className="holo-readout" aria-live="polite">
         {!info ? (
