@@ -386,7 +386,7 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
             <ul className="muscle-list">
               {[...summary.byMuscle].sort((a, b) => b.hits - a.hits).map(m => (
                 <li key={m.id}>
-                  <span className="muscle-name">{m.label}</span>
+                  <span className="muscle-name"><span aria-hidden="true">{m.emoji}</span> {m.label}</span>
                   <span className="muscle-bar"><i style={{ width: `${summary.maxHits ? (m.hits / summary.maxHits) * 100 : 0}%` }} /></span>
                   <span className="muscle-n">{m.hits}×</span>
                 </li>

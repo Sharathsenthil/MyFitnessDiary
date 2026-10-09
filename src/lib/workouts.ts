@@ -1,18 +1,18 @@
 import type { Exercise, MuscleId, ReportRecord, WorkoutEntry, WorkoutSet } from '../types';
 import { addDays, parseDateStr, toDateStr } from './dates';
 
-export const MUSCLES: { id: MuscleId; label: string }[] = [
-  { id: 'chest', label: 'Chest' },
-  { id: 'shoulders', label: 'Shoulders' },
-  { id: 'biceps', label: 'Biceps' },
-  { id: 'triceps', label: 'Triceps' },
-  { id: 'forearms', label: 'Forearms' },
-  { id: 'abs', label: 'Abs' },
-  { id: 'back', label: 'Back' },
-  { id: 'glutes', label: 'Glutes' },
-  { id: 'quads', label: 'Quads' },
-  { id: 'hamstrings', label: 'Hamstrings' },
-  { id: 'calves', label: 'Calves' },
+export const MUSCLES: { id: MuscleId; label: string; emoji: string }[] = [
+  { id: 'chest', label: 'Chest', emoji: '🫁' },
+  { id: 'shoulders', label: 'Shoulders', emoji: '🏋️' },
+  { id: 'biceps', label: 'Biceps', emoji: '💪' },
+  { id: 'triceps', label: 'Triceps', emoji: '💪' },
+  { id: 'forearms', label: 'Forearms', emoji: '🦾' },
+  { id: 'abs', label: 'Abs', emoji: '🔥' },
+  { id: 'back', label: 'Back', emoji: '🧗' },
+  { id: 'glutes', label: 'Glutes', emoji: '🍑' },
+  { id: 'quads', label: 'Quads', emoji: '🦵' },
+  { id: 'hamstrings', label: 'Hamstrings', emoji: '🦵' },
+  { id: 'calves', label: 'Calves', emoji: '🦶' },
 ];
 
 const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -174,6 +174,7 @@ export interface ExerciseTotal { exercise: Exercise; amount: number; sessions: n
 export interface MuscleTotal {
   id: MuscleId;
   label: string;
+  emoji: string;
   /** Times this muscle was worked (once per logged workout that targets it) */
   hits: number;
   /** Share of all muscle hits, 0-100 */

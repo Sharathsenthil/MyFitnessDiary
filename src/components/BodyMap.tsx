@@ -1,6 +1,7 @@
-import { Suspense, lazy, useId, useMemo, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useId, useState, type ReactNode } from 'react';
 import type { Gender, MuscleId } from '../types';
 import type { MuscleTotal } from '../lib/workouts';
+import { MuscleCard } from './MuscleCard';
 
 // The 3D viewer (three.js) is loaded only when the body is shown
 const Body3D = lazy(() => import('./Body3D'));
@@ -152,9 +153,7 @@ function Figure({ title, gender, shapes, byId, max, active, onHover, onPick }: {
   );
 }
 
-const intensity = (t: number) => (t < 0.34 ? 'Light' : t < 0.67 ? 'Moderate' : 'Heavy');
-
-/** Front and back hologram plus a readout for the muscle you hover or tap. */
+/** The 3D hologram (hover or tap a muscle for a box with its details), or a flat drawing if 3D is unavailable. */
 export function BodyMap({ muscles, max, gender }: { muscles: MuscleTotal[]; max: number; gender: Gender }) {
   const [hover, setHover] = useState<MuscleId | null>(null);
   const [selected, setSelected] = useState<MuscleId | null>(null);
@@ -164,41 +163,24 @@ export function BodyMap({ muscles, max, gender }: { muscles: MuscleTotal[]; max:
   const pick = (m: MuscleId | null) => setSelected(s => (m === null || s === m ? null : m));
   // Falls back to the flat drawing when WebGL or the model file is unavailable
   const [flat, setFlat] = useState(false);
-  const heat = useMemo(
-    () => Object.fromEntries(muscles.map(m => [m.id, m.hits > 0 && max > 0 ? m.hits / max : -1])) as Record<MuscleId, number>,
-    [muscles, max],
-  );
 
   return (
     <div className="holo">
       {flat ? (
-        <div className="body-map">
-          <Figure title="Front" gender={gender} shapes={FRONT} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
-          <Figure title="Back" gender={gender} shapes={BACK} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
-        </div>
+        <>
+          <div className="body-map">
+            <Figure title="Front" gender={gender} shapes={FRONT} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
+            <Figure title="Back" gender={gender} shapes={BACK} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
+          </div>
+          <div className="holo-readout" aria-live="polite">
+            {info ? <MuscleCard info={info} max={max} /> : <span className="holo-hint">Hover or tap a muscle to see how much it was worked</span>}
+          </div>
+        </>
       ) : (
         <Suspense fallback={<div className="holo3d"><div className="holo3d-loading">Loading 3D body…</div></div>}>
-          <Body3D gender={gender} heat={heat} active={active} onHover={setHover} onPick={pick} onFail={() => setFlat(true)} />
+          <Body3D gender={gender} muscles={muscles} max={max} onFail={() => setFlat(true)} />
         </Suspense>
       )}
-
-      <div className="holo-readout" aria-live="polite">
-        {!info ? (
-          <span className="holo-hint">Hover or tap a muscle to see how much it was worked</span>
-        ) : info.hits === 0 ? (
-          <><strong>{info.label}</strong><span>Not worked in this period</span></>
-        ) : (
-          <>
-            <strong>{info.label}</strong>
-            <span>{info.hits}× · {info.share}% of your training · {intensity(info.hits / max)}</span>
-            <span className="holo-sources">
-              {info.sources.map(s => `${s.name} ×${s.count}`).join(' · ')}
-              {info.minutes > 0 && ` · ${Math.round(info.minutes)} min`}
-              {info.reps > 0 && ` · ${info.reps} reps`}
-            </span>
-          </>
-        )}
-      </div>
 
       <div className="holo-scale" aria-hidden="true"><span>Light</span><i /><span>Heavy</span></div>
     </div>

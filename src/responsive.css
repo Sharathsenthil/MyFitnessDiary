@@ -424,7 +424,7 @@ button { touch-action: manipulation; }
 @media (prefers-reduced-motion: reduce) { .holo-scan { display: none; } }
 .muscle-list { list-style: none; margin: 0; padding: 0; }
 .muscle-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0; font-size: 0.88rem; }
-.muscle-name { width: 5.5rem; white-space: nowrap; }
+.muscle-name { width: 7.6rem; white-space: nowrap; }
 .muscle-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--card-border); overflow: hidden; }
 .muscle-bar i { display: block; height: 100%; background: #f97316; border-radius: 3px; }
 .muscle-n { width: 2rem; text-align: right; white-space: nowrap; color: var(--text-muted); }
@@ -463,6 +463,8 @@ button { touch-action: manipulation; }
 .holo3d-canvas { width: 100%; height: 100%; display: block; cursor: grab; outline: none; }
 .holo3d-canvas:active { cursor: grabbing; }
 .holo3d-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #93c5fd; font-size: 0.9rem; pointer-events: none; }
-.holo3d-bar { position: absolute; left: 0; right: 0; bottom: 0.2rem; display: flex; justify-content: center; gap: 0.4rem; }
-.holo3d-bar .chip { background: rgba(59,130,246,0.15); border-color: rgba(96,165,250,0.4); color: #bfdbfe; padding: 0.3rem 0.8rem; }
 .holo3d-hint { position: absolute; top: 0.2rem; left: 0; right: 0; text-align: center; font-size: 0.72rem; letter-spacing: 0.1em; text-transform: uppercase; color: #93c5fd; opacity: 0.75; pointer-events: none; }
+.holo-tip { position: absolute; z-index: 5; transform: translate(-50%, calc(-100% - 14px)); display: flex; flex-direction: column; gap: 0.15rem; padding: 0.55rem 0.7rem; border: 1px solid rgba(96,165,250,0.55); border-radius: 10px; background: rgba(6,13,27,0.92); box-shadow: 0 6px 24px rgba(0,0,0,0.45), 0 0 16px rgba(59,130,246,0.25); color: #dbeafe; font-size: 0.82rem; line-height: 1.35; pointer-events: none; }
+.holo-tip.below { transform: translate(-50%, 18px); }
+.holo-tip strong { color: #fff; font-size: 0.98rem; white-space: nowrap; }
+.muscle-emoji { font-size: 1.05em; }

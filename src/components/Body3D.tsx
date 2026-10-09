@@ -1,9 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { Gender, MuscleId } from '../types';
+import type { MuscleTotal } from '../lib/workouts';
+import { MuscleCard } from './MuscleCard';
 import { ZONES, muscleAt } from '../lib/muscleZones';
 
 const NZ = ZONES.length;
@@ -105,21 +107,27 @@ const heatColor = (t: number) => new THREE.Color().setHSL((205 - 205 * t) / 360,
 
 export interface Body3DProps {
   gender: Gender;
-  /** Per muscle: -1 = not worked, otherwise 0-1 relative intensity */
-  heat: Record<MuscleId, number>;
-  active: MuscleId | null;
-  onHover: (m: MuscleId | null) => void;
-  onPick: (m: MuscleId | null) => void;
+  muscles: MuscleTotal[];
+  max: number;
   onFail: () => void;
 }
 
-/** Rotatable 3D hologram of the body. Drag to spin it; hover or tap a muscle. */
-export default function Body3D({ gender, heat, active, onHover, onPick, onFail }: Body3DProps) {
+/** A muscle under the pointer and where, in pixels inside the view */
+interface Tip { id: MuscleId; x: number; y: number }
+const TIP_W = 210;
+
+/** 3D hologram of the body: turns slowly by itself, drag to spin it; hover or tap a muscle for a details box. */
+export default function Body3D({ gender, muscles, max, onFail }: Body3DProps) {
   const host = useRef<HTMLDivElement>(null);
-  const api = useRef<{ setHeat: (h: Record<MuscleId, number>, a: MuscleId | null) => void; turnTo: (az: number) => void } | null>(null);
-  const cb = useRef({ onHover, onPick, onFail });
-  cb.current = { onHover, onPick, onFail };
+  const api = useRef<{ setHeat: (h: Record<MuscleId, number>, a: MuscleId | null) => void } | null>(null);
+  const [tip, setTip] = useState<Tip | null>(null);
+  const cb = useRef({ setTip, onFail });
+  cb.current = { setTip, onFail };
   const [loading, setLoading] = useState(true);
+  const heat = useMemo(
+    () => Object.fromEntries(muscles.map(m => [m.id, m.hits > 0 && max > 0 ? m.hits / max : -1])) as Record<MuscleId, number>,
+    [muscles, max],
+  );
 
   useEffect(() => {
     const el = host.current;
@@ -147,11 +155,12 @@ export default function Body3D({ gender, heat, active, onHover, onPick, onFail }
     controls.minPolarAngle = controls.maxPolarAngle = Math.PI / 2;
     controls.enableDamping = true; controls.dampingFactor = 0.08;
     controls.rotateSpeed = 0.9;
-    controls.autoRotate = motion === 1; controls.autoRotateSpeed = 1.6;
+    // Turns slowly on its own (this is the point of the view, so it ignores the reduced-motion setting); a drag takes over
+    controls.autoRotate = true; controls.autoRotateSpeed = 1.2;
     renderer.domElement.style.touchAction = 'pan-y';
     let idleTimer = 0;
-    controls.addEventListener('start', () => { controls.autoRotate = false; window.clearTimeout(idleTimer); });
-    controls.addEventListener('end', () => { if (motion) idleTimer = window.setTimeout(() => { controls.autoRotate = true; }, 5000); });
+    controls.addEventListener('start', () => { controls.autoRotate = false; window.clearTimeout(idleTimer); cb.current.setTip(null); });
+    controls.addEventListener('end', () => { idleTimer = window.setTimeout(() => { controls.autoRotate = true; }, 1200); });
 
     const uniforms = {
       uTime: { value: 0 }, uMotion: { value: motion },
@@ -223,15 +232,22 @@ export default function Body3D({ gender, heat, active, onHover, onPick, onFail }
     };
     let down: { x: number; y: number; t: number } | null = null;
     const canvas = renderer.domElement;
+    const tipAt = (e: PointerEvent): Tip | null => {
+      const id = muscleUnder(e);
+      if (!id) return null;
+      const r = canvas.getBoundingClientRect();
+      return { id, x: e.clientX - r.left, y: e.clientY - r.top };
+    };
     let moveRaf = 0;
     const onMove = (e: PointerEvent) => {
       if (e.pointerType !== 'mouse' || e.buttons !== 0 || moveRaf) return;
-      moveRaf = requestAnimationFrame(() => { moveRaf = 0; cb.current.onHover(muscleUnder(e)); });
+      moveRaf = requestAnimationFrame(() => { moveRaf = 0; cb.current.setTip(tipAt(e)); });
     };
-    const onLeave = () => cb.current.onHover(null);
+    const onLeave = (e: PointerEvent) => { if (e.pointerType === 'mouse') cb.current.setTip(null); };
     const onDown = (e: PointerEvent) => { down = { x: e.clientX, y: e.clientY, t: performance.now() }; };
     const onUp = (e: PointerEvent) => {
-      if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && performance.now() - down.t < 500) cb.current.onPick(muscleUnder(e));
+      // a tap (not a drag) shows the box for that spot; tapping empty space hides it
+      if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) < 6 && performance.now() - down.t < 500) cb.current.setTip(tipAt(e));
       down = null;
     };
     canvas.addEventListener('pointermove', onMove);
@@ -239,7 +255,7 @@ export default function Body3D({ gender, heat, active, onHover, onPick, onFail }
     canvas.addEventListener('pointerdown', onDown);
     canvas.addEventListener('pointerup', onUp);
 
-    // ----- sizing, turning, render loop (paused while off screen) -----
+    // ----- sizing and render loop (paused while off screen) -----
     const resize = () => {
       const w = el.clientWidth, h = el.clientHeight;
       if (!w || !h) return;
@@ -253,7 +269,6 @@ export default function Body3D({ gender, heat, active, onHover, onPick, onFail }
     };
     const ro = new ResizeObserver(resize); ro.observe(el); resize();
 
-    let turn: { from: number; to: number; t0: number } | null = null;
     api.current = {
       setHeat: (h, a) => {
         ZONES.forEach((z, i) => {
@@ -263,13 +278,6 @@ export default function Body3D({ gender, heat, active, onHover, onPick, onFail }
         });
         uniforms.uActive.value = a ? ZONES.findIndex(z => z.id === a) : -1;
       },
-      turnTo: az => {
-        controls.autoRotate = false;
-        let from = controls.getAzimuthalAngle(), to = az;
-        while (to - from > Math.PI) to -= 2 * Math.PI;
-        while (to - from < -Math.PI) to += 2 * Math.PI;
-        turn = { from, to, t0: performance.now() };
-      },
     };
 
     let visible = true, raf = 0;
@@ -278,13 +286,6 @@ export default function Body3D({ gender, heat, active, onHover, onPick, onFail }
       raf = requestAnimationFrame(frame);
       if (!visible) return;
       uniforms.uTime.value = clock.getElapsedTime();
-      if (turn) {
-        const k = Math.min(1, (performance.now() - turn.t0) / 600), e = k * k * (3 - 2 * k);
-        const a = turn.from + (turn.to - turn.from) * e;
-        camera.position.set(target.x + Math.sin(a) * DIST, target.y, target.z + Math.cos(a) * DIST);
-        camera.lookAt(target);
-        if (k === 1) turn = null;
-      }
       controls.update();
       renderer.render(scene, camera);
     };
@@ -303,17 +304,21 @@ export default function Body3D({ gender, heat, active, onHover, onPick, onFail }
     };
   }, [gender]);
 
-  useEffect(() => { api.current?.setHeat(heat, active); }, [heat, active, loading]);
+  useEffect(() => { api.current?.setHeat(heat, tip?.id ?? null); }, [heat, tip?.id, loading]);
+
+  const info = tip ? muscles.find(m => m.id === tip.id) : null;
+  const width = host.current?.clientWidth ?? 0;
 
   return (
     <div className="holo3d" ref={host}>
       {loading && <div className="holo3d-loading">Loading 3D body…</div>}
-      <div className="holo3d-bar">
-        <button type="button" className="chip" onClick={() => api.current?.turnTo(0)}>Front</button>
-        <button type="button" className="chip" onClick={() => api.current?.turnTo(Math.PI / 2)}>Side</button>
-        <button type="button" className="chip" onClick={() => api.current?.turnTo(Math.PI)}>Back</button>
-      </div>
       <span className="holo3d-hint">Drag to rotate</span>
+      {tip && info && (
+        <div className={`holo-tip ${tip.y < 130 ? 'below' : ''}`} role="status"
+          style={{ left: Math.min(Math.max(tip.x, TIP_W / 2 + 6), Math.max(width - TIP_W / 2 - 6, TIP_W / 2 + 6)), top: tip.y, width: TIP_W }}>
+          <MuscleCard info={info} max={max} />
+        </div>
+      )}
     </div>
   );
 }
