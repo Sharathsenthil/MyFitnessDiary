@@ -6,6 +6,7 @@ import { parseDateStr, toDateStr } from '../lib/dates';
 import { useAuth } from '../lib/auth';
 import { computeStreaks } from '../lib/streaks';
 import { StreakPanel } from '../components/StreakPanel';
+import { WorkoutSection } from '../components/WorkoutSection';
 
 export function DailyLogTab() {
   const { isAdmin, save } = useAuth();
@@ -152,6 +153,7 @@ export function DailyLogTab() {
           {isAdmin ? 'Tap a day to cycle its mark. A 4th tap clears it.' : '🔒 View only — log in as admin to edit'}
         </p>
       </div>
+      <WorkoutSection />
     </div>
   );
 }

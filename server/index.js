@@ -29,6 +29,8 @@ const fitnessSchema = new mongoose.Schema({
   gymDates: [String],
   leaveDates: [String],
   restDates: [String],
+  workoutLogs: [Object],
+  customExercises: [Object],
   updatedAt: { type: Date, default: Date.now }
 });
 
@@ -161,7 +163,7 @@ app.get('/api/fitness', async (req, res) => {
 app.post('/api/fitness', requireAdmin, async (req, res) => {
   try {
     // Whitelist fields so clients can't write arbitrary keys
-    const allowed = ['personalInfo', 'progressData', 'gymDates', 'leaveDates', 'restDates'];
+    const allowed = ['personalInfo', 'progressData', 'gymDates', 'leaveDates', 'restDates', 'workoutLogs', 'customExercises'];
     const updateData = Object.fromEntries(Object.entries(req.body || {}).filter(([k]) => allowed.includes(k)));
     updateData.updatedAt = Date.now();
     

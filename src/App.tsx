@@ -3,7 +3,7 @@ import {
   FileText, LayoutDashboard, CalendarCheck, TrendingUp,
   Menu, Moon, Sun, Lock, Unlock, X, KeyRound,
 } from 'lucide-react';
-import type { FitnessResponse, TabId } from './types';
+import type { Exercise, FitnessResponse, TabId, WorkoutEntry } from './types';
 import { useLocalStorage } from './lib/storage';
 import { AuthContext, TOKEN_KEY } from './lib/auth';
 import { cleanRecords, sortRecords } from './lib/records';
@@ -48,6 +48,8 @@ function App() {
   const [, setGymDates] = useLocalStorage<string[]>('gymDates', []);
   const [, setLeaveDates] = useLocalStorage<string[]>('leaveDates', []);
   const [, setRestDates] = useLocalStorage<string[]>('restDates', []);
+  const [, setWorkoutLogs] = useLocalStorage<WorkoutEntry[]>('workoutLogs', []);
+  const [, setCustomExercises] = useLocalStorage<Exercise[]>('customExercises', []);
 
   // Theme variables live on <html> too, so the area behind the status bar matches the theme
   useEffect(() => { document.documentElement.classList.toggle('dark', isDarkMode); }, [isDarkMode]);
@@ -124,6 +126,8 @@ function App() {
         if (Array.isArray(data.gymDates) && data.gymDates.length > 0) setGymDates(data.gymDates);
         if (Array.isArray(data.leaveDates) && data.leaveDates.length > 0) setLeaveDates(data.leaveDates);
         if (Array.isArray(data.restDates) && data.restDates.length > 0) setRestDates(data.restDates);
+        if (Array.isArray(data.workoutLogs) && data.workoutLogs.length > 0) setWorkoutLogs(data.workoutLogs);
+        if (Array.isArray(data.customExercises) && data.customExercises.length > 0) setCustomExercises(data.customExercises);
       })
       .catch(err => console.error('Error fetching data:', err));
   // eslint-disable-next-line react-hooks/exhaustive-deps

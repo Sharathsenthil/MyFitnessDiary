@@ -31,9 +31,36 @@ export interface FitnessResponse {
   gymDates?: string[];
   leaveDates?: string[];
   restDates?: string[];
+  workoutLogs?: WorkoutEntry[];
+  customExercises?: Exercise[];
 }
 
 export type TabId = 'report' | 'daily' | 'new-report' | 'progress';
 
 /** How a calendar day is marked. Unmarked days have no status. */
 export type DayStatus = 'gym' | 'leave' | 'rest';
+
+export type MuscleId =
+  | 'chest' | 'shoulders' | 'biceps' | 'triceps' | 'forearms' | 'abs'
+  | 'back' | 'glutes' | 'quads' | 'hamstrings' | 'calves';
+
+/** A workout you can log: timed (minutes) or counted (reps). */
+export interface Exercise {
+  id: string;
+  name: string;
+  mode: 'time' | 'reps';
+  muscles: MuscleId[];
+  /** Intensity for timed exercises (calories = MET x kg x hours) */
+  met?: number;
+  /** Calories per rep for counted exercises */
+  kcalPerRep?: number;
+  builtin?: boolean;
+}
+
+/** One logged workout: minutes for a timed exercise, reps for a counted one. */
+export interface WorkoutEntry {
+  id: string;
+  date: string;
+  exerciseId: string;
+  amount: number;
+}
