@@ -1,10 +1,10 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Plus, Trash2, Flame, Timer, Repeat, Activity, X } from 'lucide-react';
+import { Plus, Trash2, Flame, Timer, Repeat, Activity } from 'lucide-react';
 import type { Exercise, MuscleId, ReportRecord, WorkoutEntry } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { useAuth } from '../lib/auth';
 import { toDateStr } from '../lib/dates';
-import { DEFAULT_EXERCISES, MUSCLES, caloriesFor, entriesOn, latestWeight, summarize, type Period } from '../lib/workouts';
+import { MUSCLES, QUICK_IDS, caloriesFor, entriesOn, latestWeight, mergeExercises, normName, searchExercises, summarize, type Period } from '../lib/workouts';
 import { DateField } from './DateField';
 import { BodyMap } from './BodyMap';
 
@@ -19,24 +19,37 @@ const unitOf = (ex: Exercise) => (ex.mode === 'time' ? 'min' : 'reps');
 
 export function WorkoutSection() {
   const { isAdmin, save } = useAuth();
-  const [logs, setLogs] = useLocalStorage<WorkoutEntry[]>('workoutLogs', []);
+  const [rawLogs, setLogs] = useLocalStorage<WorkoutEntry[]>('workoutLogs', []);
   const [custom, setCustom] = useLocalStorage<Exercise[]>('customExercises', []);
   const [reports] = useLocalStorage<ReportRecord[]>('progressData', []);
   const [gymDates, setGymDates] = useLocalStorage<string[]>('gymDates', []);
   const [leaveDates, setLeaveDates] = useLocalStorage<string[]>('leaveDates', []);
   const [restDates, setRestDates] = useLocalStorage<string[]>('restDates', []);
 
-  const exercises = useMemo(() => [...DEFAULT_EXERCISES, ...custom], [custom]);
+  const { list: exercises, alias } = useMemo(() => mergeExercises(custom), [custom]);
+  // Older entries of a custom workout that now matches a preset are counted under the preset
+  const logs = useMemo(() => rawLogs.map(l => alias.has(l.exerciseId) ? { ...l, exerciseId: alias.get(l.exerciseId)! } : l), [rawLogs, alias]);
   const weight = latestWeight(reports);
 
   const [date, setDate] = useState(toDateStr(new Date()));
-  const [pickedId, setPickedId] = useState(DEFAULT_EXERCISES[0].id);
+  const [pickedId, setPickedId] = useState<string | null>(QUICK_IDS[0]);
+  const [query, setQuery] = useState('');
   const [amount, setAmount] = useState('');
   const [period, setPeriod] = useState<Period>('week');
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ name: '', mode: 'time' as Exercise['mode'], muscles: [] as MuscleId[], intensity: '' });
 
-  const picked = exercises.find(e => e.id === pickedId) ?? exercises[0];
+  const picked = exercises.find(e => e.id === pickedId) ?? null;
+  const matches = useMemo(() => searchExercises(exercises, query), [exercises, query]);
+  const exactMatch = exercises.find(e => normName(e.name) === normName(query));
+  // Quick buttons: the usual three, then whatever you logged most recently
+  const quick = useMemo(() => {
+    const recent = [...logs].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).map(l => l.exerciseId);
+    const ids = [...new Set([...QUICK_IDS, ...recent])].slice(0, 8);
+    return ids.map(id => exercises.find(e => e.id === id)).filter((e): e is Exercise => !!e);
+  }, [logs, exercises]);
+
+  const pick = (ex: Exercise) => { setPickedId(ex.id); setQuery(''); setAdding(false); };
   const dayEntries = entriesOn(logs, date);
   const summary = useMemo(() => summarize(logs, exercises, period, weight), [logs, exercises, period, weight]);
   const hits = Object.fromEntries(summary.byMuscle.map(m => [m.id, m.hits])) as Record<MuscleId, number>;
@@ -48,8 +61,8 @@ export function WorkoutSection() {
   const addEntry = (e: FormEvent) => {
     e.preventDefault();
     const n = Number(amount);
-    if (!isAdmin || !(n > 0)) return;
-    const next = [...logs, { id: `${Date.now()}`, date, exerciseId: picked.id, amount: n }];
+    if (!isAdmin || !picked || !(n > 0)) return;
+    const next = [...rawLogs, { id: `${Date.now()}`, date, exerciseId: picked.id, amount: n }];
     // A logged workout means you went to the gym that day
     const gym = gymDates.includes(date) ? gymDates : [...gymDates, date];
     const leave = leaveDates.filter(d => d !== date);
@@ -60,7 +73,7 @@ export function WorkoutSection() {
   };
 
   const removeEntry = (id: string) => {
-    const next = logs.filter(l => l.id !== id);
+    const next = rawLogs.filter(l => l.id !== id);
     setLogs(next); save({ workoutLogs: next });
   };
 
@@ -68,6 +81,9 @@ export function WorkoutSection() {
     e.preventDefault();
     const name = draft.name.trim();
     if (!isAdmin || !name) return;
+    // Same name as an existing workout: use that one instead of creating a duplicate
+    const existing = exercises.find(x => normName(x.name) === normName(name));
+    if (existing) { pick(existing); setDraft({ name: '', mode: 'time', muscles: [], intensity: '' }); return; }
     const intensity = Number(draft.intensity);
     const ex: Exercise = {
       id: `c${Date.now()}`, name, mode: draft.mode, muscles: draft.muscles,
@@ -75,15 +91,15 @@ export function WorkoutSection() {
     };
     const next = [...custom, ex];
     setCustom(next); save({ customExercises: next });
-    setPickedId(ex.id); setAdding(false);
+    pick(ex);
     setDraft({ name: '', mode: 'time', muscles: [], intensity: '' });
   };
 
   const removeExercise = (id: string) => {
-    if (logs.some(l => l.exerciseId === id)) return;
+    if (rawLogs.some(l => l.exerciseId === id)) return;
     const next = custom.filter(c => c.id !== id);
     setCustom(next); save({ customExercises: next });
-    if (pickedId === id) setPickedId(DEFAULT_EXERCISES[0].id);
+    if (pickedId === id) setPickedId(null);
   };
 
   const toggleMuscle = (m: MuscleId) =>
@@ -104,19 +120,48 @@ export function WorkoutSection() {
 
         <DateField value={date} onChange={setDate} label="Workout date" />
 
-        <div className="chip-row" role="radiogroup" aria-label="Workout">
-          {exercises.map(ex => (
-            <button key={ex.id} type="button" role="radio" aria-checked={ex.id === picked.id}
-              className={`chip ${ex.id === picked.id ? 'on' : ''}`} onClick={() => setPickedId(ex.id)}>
-              {ex.name}
-            </button>
-          ))}
-          {isAdmin && (
-            <button type="button" className="chip add" onClick={() => setAdding(a => !a)}>
-              {adding ? <X size={14} /> : <Plus size={14} />} New
-            </button>
-          )}
-        </div>
+        <label className="field-label" htmlFor="workout-search" style={{ marginTop: '0.9rem' }}>Workout</label>
+        <input id="workout-search" className="input-field" autoComplete="off" autoCapitalize="words" maxLength={40}
+          placeholder="Type to search, e.g. chest" value={query}
+          onChange={e => { setQuery(e.target.value); setAdding(false); }}
+          onKeyDown={e => {
+            if (e.key !== 'Enter' || !query.trim()) return;
+            e.preventDefault();
+            if (exactMatch) pick(exactMatch);
+            else if (matches[0]) pick(matches[0]);
+            else if (isAdmin) { setDraft(d => ({ ...d, name: query.trim() })); setAdding(true); }
+          }} />
+
+        {query.trim() ? (
+          <ul className="suggest" role="listbox" aria-label="Matching workouts">
+            {matches.map(ex => (
+              <li key={ex.id}>
+                <button type="button" role="option" aria-selected={ex.id === pickedId} onClick={() => pick(ex)}>
+                  <span className="suggest-name">{ex.name}</span>
+                  <span className="suggest-meta">{ex.mode === 'time' ? 'minutes' : 'reps'}</span>
+                </button>
+              </li>
+            ))}
+            {!exactMatch && isAdmin && (
+              <li>
+                <button type="button" className="suggest-new" onClick={() => { setDraft(d => ({ ...d, name: query.trim() })); setAdding(true); }}>
+                  <Plus size={14} /> <span className="suggest-name">Add &ldquo;{query.trim()}&rdquo; as new workout</span>
+                </button>
+              </li>
+            )}
+            {matches.length === 0 && !isAdmin && <li className="suggest-empty">No matching workout</li>}
+          </ul>
+        ) : (
+          <div className="chip-row" role="radiogroup" aria-label="Quick workouts">
+            {quick.map(ex => (
+              <button key={ex.id} type="button" role="radio" aria-checked={ex.id === pickedId}
+                className={`chip ${ex.id === pickedId ? 'on' : ''}`} onClick={() => pick(ex)}>
+                {ex.name}
+              </button>
+            ))}
+            {picked && !quick.some(q => q.id === picked.id) && <button type="button" role="radio" aria-checked className="chip on">{picked.name}</button>}
+          </div>
+        )}
 
         {isAdmin && adding && (
           <form className="exercise-form" onSubmit={addExercise}>
@@ -146,8 +191,8 @@ export function WorkoutSection() {
               <>
                 <label className="field-label">Remove a workout</label>
                 <div className="chip-row tight">
-                  {custom.map(c => {
-                    const used = logs.some(l => l.exerciseId === c.id);
+                  {custom.filter(c => !alias.has(c.id)).map(c => {
+                    const used = rawLogs.some(l => l.exerciseId === c.id);
                     return (
                       <button key={c.id} type="button" className="chip danger" disabled={used}
                         title={used ? 'Already logged, so it cannot be removed' : `Remove ${c.name}`} onClick={() => removeExercise(c.id)}>
@@ -164,8 +209,8 @@ export function WorkoutSection() {
         {isAdmin ? (
           <form className="add-row" onSubmit={addEntry}>
             <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required
-              placeholder={picked.mode === 'time' ? 'Minutes' : 'Reps'} value={amount} onChange={e => setAmount(e.target.value)} />
-            <button type="submit" className="submit-btn add-btn"><Plus size={16} /> Add</button>
+              placeholder={!picked ? 'Pick a workout first' : picked.mode === 'time' ? 'Minutes' : 'Reps'} disabled={!picked} value={amount} onChange={e => setAmount(e.target.value)} />
+            <button type="submit" className="submit-btn add-btn" disabled={!picked}><Plus size={16} /> Add</button>
           </form>
         ) : <p className="calendar-hint">🔒 View only — log in as admin to add workouts</p>}
 

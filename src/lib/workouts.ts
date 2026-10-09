@@ -15,11 +15,134 @@ export const MUSCLES: { id: MuscleId; label: string }[] = [
   { id: 'calves', label: 'Calves' },
 ];
 
+const slug = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const time = (name: string, met: number, ...muscles: MuscleId[]): Exercise =>
+  ({ id: name === 'Warm-up' ? 'warmup' : slug(name), name, mode: 'time', muscles, met, builtin: true });
+const reps = (name: string, kcalPerRep: number, ...muscles: MuscleId[]): Exercise =>
+  ({ id: slug(name), name, mode: 'reps', muscles, kcalPerRep, builtin: true });
+
+/** The ones shown as quick buttons; every other preset is found by typing. */
+export const QUICK_IDS = ['warmup', 'treadmill', 'cycling'];
+
 export const DEFAULT_EXERCISES: Exercise[] = [
-  { id: 'warmup', name: 'Warm-up', mode: 'time', muscles: [], met: 3.5, builtin: true },
-  { id: 'treadmill', name: 'Treadmill', mode: 'time', muscles: ['quads', 'hamstrings', 'calves', 'glutes'], met: 8, builtin: true },
-  { id: 'cycling', name: 'Cycling', mode: 'time', muscles: ['quads', 'hamstrings', 'glutes', 'calves'], met: 7.5, builtin: true },
+  // Cardio and timed (minutes)
+  time('Warm-up', 3.5),
+  time('Treadmill', 8, 'quads', 'hamstrings', 'calves', 'glutes'),
+  time('Cycling', 7.5, 'quads', 'hamstrings', 'glutes', 'calves'),
+  time('Walking', 3.5, 'quads', 'calves', 'glutes'),
+  time('Jogging', 7, 'quads', 'hamstrings', 'calves', 'glutes'),
+  time('Running', 9.8, 'quads', 'hamstrings', 'calves', 'glutes'),
+  time('Elliptical', 5, 'quads', 'hamstrings', 'glutes'),
+  time('Rowing machine', 7, 'back', 'biceps', 'quads', 'glutes'),
+  time('Stair climber', 8.8, 'quads', 'glutes', 'calves'),
+  time('Skipping rope', 11, 'calves', 'shoulders', 'forearms'),
+  time('Swimming', 6, 'shoulders', 'back', 'chest', 'quads'),
+  time('HIIT', 8, 'quads', 'glutes', 'abs'),
+  time('Battle ropes', 10, 'shoulders', 'biceps', 'forearms', 'abs'),
+  time('Plank', 3.5, 'abs', 'shoulders'),
+  time('Stretching', 2.3),
+  time('Cool-down', 2.5),
+  // Chest
+  reps('Chest press', 0.5, 'chest', 'triceps', 'shoulders'),
+  reps('Bench press', 0.5, 'chest', 'triceps', 'shoulders'),
+  reps('Incline chest press', 0.5, 'chest', 'shoulders', 'triceps'),
+  reps('Incline dumbbell press', 0.5, 'chest', 'shoulders', 'triceps'),
+  reps('Decline chest press', 0.5, 'chest', 'triceps'),
+  reps('Dumbbell fly', 0.3, 'chest', 'shoulders'),
+  reps('Cable crossover', 0.3, 'chest'),
+  reps('Pec deck', 0.3, 'chest'),
+  reps('Push-ups', 0.32, 'chest', 'triceps', 'shoulders', 'abs'),
+  reps('Chest dips', 0.45, 'chest', 'triceps', 'shoulders'),
+  // Back
+  reps('Lat pulldown', 0.4, 'back', 'biceps'),
+  reps('Seated row', 0.4, 'back', 'biceps'),
+  reps('Pull-ups', 0.6, 'back', 'biceps', 'forearms'),
+  reps('Chin-ups', 0.6, 'back', 'biceps'),
+  reps('Bent-over row', 0.5, 'back', 'biceps'),
+  reps('Single-arm dumbbell row', 0.4, 'back', 'biceps'),
+  reps('T-bar row', 0.5, 'back', 'biceps'),
+  reps('Deadlift', 0.8, 'back', 'glutes', 'hamstrings', 'forearms'),
+  reps('Back extension', 0.3, 'back', 'glutes', 'hamstrings'),
+  reps('Face pull', 0.25, 'shoulders', 'back'),
+  reps('Shrugs', 0.3, 'back', 'shoulders', 'forearms'),
+  // Shoulders
+  reps('Shoulder press', 0.45, 'shoulders', 'triceps'),
+  reps('Arnold press', 0.45, 'shoulders', 'triceps'),
+  reps('Lateral raise', 0.25, 'shoulders'),
+  reps('Front raise', 0.25, 'shoulders'),
+  reps('Rear delt fly', 0.25, 'shoulders', 'back'),
+  reps('Upright row', 0.35, 'shoulders', 'back'),
+  // Biceps and forearms
+  reps('Bicep curl', 0.25, 'biceps', 'forearms'),
+  reps('Hammer curl', 0.25, 'biceps', 'forearms'),
+  reps('Preacher curl', 0.25, 'biceps'),
+  reps('Concentration curl', 0.25, 'biceps'),
+  reps('Cable curl', 0.25, 'biceps'),
+  reps('Wrist curl', 0.15, 'forearms'),
+  reps('Reverse curl', 0.2, 'forearms', 'biceps'),
+  // Triceps
+  reps('Tricep pushdown', 0.25, 'triceps'),
+  reps('Skull crushers', 0.3, 'triceps'),
+  reps('Overhead tricep extension', 0.25, 'triceps'),
+  reps('Close-grip bench press', 0.45, 'triceps', 'chest'),
+  reps('Tricep dips', 0.45, 'triceps', 'chest', 'shoulders'),
+  reps('Tricep kickback', 0.2, 'triceps'),
+  // Abs
+  reps('Crunches', 0.15, 'abs'),
+  reps('Sit-ups', 0.2, 'abs'),
+  reps('Leg raises', 0.2, 'abs'),
+  reps('Hanging leg raise', 0.3, 'abs', 'forearms'),
+  reps('Russian twist', 0.15, 'abs'),
+  reps('Cable crunch', 0.2, 'abs'),
+  reps('Ab wheel', 0.3, 'abs', 'shoulders'),
+  reps('Mountain climbers', 0.2, 'abs', 'shoulders', 'quads'),
+  // Legs and glutes
+  reps('Squats', 0.5, 'quads', 'glutes', 'hamstrings'),
+  reps('Goblet squat', 0.4, 'quads', 'glutes'),
+  reps('Hack squat', 0.5, 'quads', 'glutes'),
+  reps('Leg press', 0.5, 'quads', 'glutes', 'hamstrings'),
+  reps('Lunges', 0.4, 'quads', 'glutes', 'hamstrings'),
+  reps('Bulgarian split squat', 0.5, 'quads', 'glutes'),
+  reps('Step-ups', 0.35, 'quads', 'glutes'),
+  reps('Leg extension', 0.3, 'quads'),
+  reps('Leg curl', 0.3, 'hamstrings'),
+  reps('Romanian deadlift', 0.6, 'hamstrings', 'glutes', 'back'),
+  reps('Hip thrust', 0.4, 'glutes', 'hamstrings'),
+  reps('Glute kickback', 0.2, 'glutes'),
+  reps('Calf raises', 0.2, 'calves'),
 ];
+
+export const normName = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+/**
+ * Presets plus your own workouts. A custom workout named like a preset (e.g. an older "Chest press")
+ * is folded into the preset so the same workout never appears twice; `alias` maps its old id across.
+ */
+export function mergeExercises(custom: Exercise[]): { list: Exercise[]; alias: Map<string, string> } {
+  const names = new Set(DEFAULT_EXERCISES.map(e => normName(e.name)));
+  const byName = new Map(DEFAULT_EXERCISES.map(e => [normName(e.name), e.id]));
+  const alias = new Map<string, string>();
+  const own: Exercise[] = [];
+  for (const c of custom) {
+    const key = normName(c.name);
+    if (names.has(key)) alias.set(c.id, byName.get(key)!);
+    else { own.push(c); names.add(key); byName.set(key, c.id); }
+  }
+  return { list: [...DEFAULT_EXERCISES, ...own], alias };
+}
+
+/** Matches for what has been typed: names starting with it first, then word starts, then anywhere. */
+export function searchExercises(list: Exercise[], query: string, limit = 8): Exercise[] {
+  const q = normName(query);
+  if (!q) return [];
+  const rank = (e: Exercise) => {
+    const n = normName(e.name);
+    if (n.startsWith(q)) return 0;
+    if (n.split(/[\s-]+/).some(w => w.startsWith(q))) return 1;
+    return n.includes(q) ? 2 : 3;
+  };
+  return list.filter(e => rank(e) < 3).sort((a, b) => rank(a) - rank(b)).slice(0, limit);
+}
 
 const FALLBACK_WEIGHT_KG = 70;
 
@@ -68,7 +191,7 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
   const totals = new Map<string, ExerciseTotal>();
   const hits = new Map<MuscleId, number>();
   const days = new Set<string>();
-  let minutes = 0, reps = 0, kcal = 0;
+  let minutes = 0, repCount = 0, kcal = 0;
 
   for (const entry of inRange) {
     const ex = byId.get(entry.exerciseId);
@@ -76,7 +199,7 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
     days.add(entry.date);
     const cal = caloriesFor(ex, entry.amount, weightKg);
     kcal += cal;
-    if (ex.mode === 'time') minutes += entry.amount; else reps += entry.amount;
+    if (ex.mode === 'time') minutes += entry.amount; else repCount += entry.amount;
     const t = totals.get(ex.id) ?? { exercise: ex, amount: 0, sessions: 0, kcal: 0 };
     t.amount += entry.amount; t.sessions++; t.kcal += cal;
     totals.set(ex.id, t);
@@ -87,7 +210,7 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
   return {
     days: days.size,
     sessions: [...totals.values()].reduce((s, t) => s + t.sessions, 0),
-    minutes, reps, kcal,
+    minutes, reps: repCount, kcal,
     byExercise: [...totals.values()].sort((a, b) => b.kcal - a.kcal),
     byMuscle,
     maxHits: Math.max(0, ...byMuscle.map(m => m.hits)),

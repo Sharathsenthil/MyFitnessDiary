@@ -415,3 +415,12 @@ button { touch-action: manipulation; }
 .muscle-bar i { display: block; height: 100%; background: #f97316; border-radius: 3px; }
 .muscle-n { width: 2rem; text-align: right; white-space: nowrap; color: var(--text-muted); }
 @media (max-width: 480px) { .body-fig svg { width: 100px; } .muscle-list { min-width: 0; flex: 1 1 100%; } }
+.suggest { list-style: none; margin: 0.4rem 0 0.9rem; padding: 0.25rem; border: 1px solid var(--card-border); border-radius: 12px; background: var(--panel-bg); max-height: 260px; overflow-y: auto; }
+.suggest button { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; background: none; border: none; border-radius: 8px; padding: 0.7rem 0.75rem; font: inherit; font-size: 0.95rem; color: var(--text-main); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.suggest button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); font-weight: 700; }
+@media (hover: hover) { .suggest button:hover { background: var(--hover-bg); } }
+.suggest-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.suggest-meta { color: var(--text-muted); font-size: 0.8rem; white-space: nowrap; }
+.suggest-new { color: var(--text-main); font-weight: 600; }
+.suggest-empty { padding: 0.7rem 0.75rem; color: var(--text-muted); font-size: 0.9rem; }
+.add-btn:disabled, .add-row .input-field:disabled { opacity: 0.5; cursor: not-allowed; }
