@@ -401,16 +401,18 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
 
             <div className="chart-card-title" style={{ marginTop: '1.25rem' }}>Muscles worked</div>
             <p className="chart-card-hint">Hover or tap a muscle. Hotter colour = worked more often.</p>
-            <BodyMap muscles={summary.byMuscle} max={summary.maxHits} gender={profile.gender ?? 'male'} />
-            <ul className="muscle-list">
-              {[...summary.byMuscle].sort((a, b) => b.hits - a.hits).map(m => (
-                <li key={m.id}>
-                  <span className="muscle-name"><span aria-hidden="true">{m.emoji}</span> {m.label}</span>
-                  <span className="muscle-bar"><i style={{ width: `${summary.maxHits ? (m.hits / summary.maxHits) * 100 : 0}%` }} /></span>
-                  <span className="muscle-n">{m.hits}×</span>
-                </li>
-              ))}
-            </ul>
+            <div className="muscle-section">
+              <BodyMap muscles={summary.byMuscle} max={summary.maxHits} gender={profile.gender ?? 'male'} />
+              <ul className="muscle-list">
+                {[...summary.byMuscle].sort((a, b) => b.hits - a.hits).map(m => (
+                  <li key={m.id}>
+                    <span className="muscle-name"><span aria-hidden="true">{m.emoji}</span> {m.label}</span>
+                    <span className="muscle-bar"><i style={{ width: `${summary.maxHits ? (m.hits / summary.maxHits) * 100 : 0}%` }} /></span>
+                    <span className="muscle-n">{m.hits}×</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </>
         )}
       </div>}

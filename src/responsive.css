@@ -500,3 +500,10 @@ button { touch-action: manipulation; }
 .view-seg { max-width: 360px; margin: 0 auto 1rem; }
 .view-seg .chip { white-space: nowrap; }
 #workout-log { max-width: 720px; margin-left: auto; margin-right: auto; }
+.ask-modal { max-width: 340px; padding: 1.1rem; }
+.ask-text { margin: 0 0 0.9rem; font-size: 0.95rem; color: var(--text-muted); line-height: 1.4; }
+/* muscle map and its list: stacked on phones and tablets, side by side on PC and big screens */
+@media (min-width: 1000px) {
+  .muscle-section { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.5rem; align-items: center; }
+  .muscle-section .holo { margin-bottom: 0; }
+}

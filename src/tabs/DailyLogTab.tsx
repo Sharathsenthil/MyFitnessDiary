@@ -1,6 +1,7 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { Dumbbell, X, Moon, CalendarDays, ClipboardList } from 'lucide-react';
-import type { DayStatus, UserProfile } from '../types';
+import type { DayStatus, UserProfile, WorkoutEntry } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { fmtDate, parseDateStr, toDateStr } from '../lib/dates';
 import { useAuth } from '../lib/auth';
@@ -19,6 +20,12 @@ export function DailyLogTab() {
   // The workout log follows the day you mark as Gym, and opens so you can enter what you did
   const [logDate, setLogDate] = useState(toDateStr(new Date()));
   const [logOpen, setLogOpen] = useState(false);
+  const [workoutLogs] = useLocalStorage<WorkoutEntry[]>('workoutLogs', []);
+  // After a day becomes Gym we ask whether to fill in its workout log. The question waits a moment so a quick
+  // second tap (on to Leave or Rest) isn't interrupted by it.
+  const [askDate, setAskDate] = useState<string | null>(null);
+  const askTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(askTimer.current), []);
   const [view, setView] = useState<'calendar' | 'log'>('calendar');
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
@@ -54,8 +61,9 @@ export function DailyLogTab() {
     const rest = next === 'rest' ? [...without(restDates), dayStr] : without(restDates);
     setGymDates(gym); setLeaveDates(leave); setRestDates(rest);
     save({ gymDates: gym, leaveDates: leave, restDates: rest });
-    // Marking a day as Gym takes you straight to the workout log for that day, ready to fill in
-    if (next === 'gym') { setLogDate(dayStr); setLogOpen(true); setView('log'); scrollToTop(false); }
+    window.clearTimeout(askTimer.current);
+    setAskDate(null);
+    if (next === 'gym') askTimer.current = window.setTimeout(() => setAskDate(dayStr), 600);
   };
 
   const days: ReactNode[] = [];
@@ -92,6 +100,14 @@ export function DailyLogTab() {
       </div>
     );
   }
+
+  const askHasLog = !!askDate && workoutLogs.some(l => l.date === askDate);
+  const goToLog = () => {
+    if (!askDate) return;
+    setLogDate(askDate);
+    setLogOpen(!askHasLog); // a new log opens the form; an existing one shows its entries to edit or add to
+    setView('log'); setAskDate(null); scrollToTop(false);
+  };
 
   const pct = Math.round((daysAttended / daysInMonth) * 100);
   const streaks = computeStreaks(gymDates, restDates);
@@ -169,6 +185,19 @@ export function DailyLogTab() {
           {isAdmin ? 'Tap a day to cycle its mark. A 4th tap clears it.' : '🔒 View only — log in as admin to edit'}
         </p>
       </div>}
+      {askDate && createPortal(
+        <div className="modal-backdrop" onClick={() => setAskDate(null)}>
+          <div className="modal ask-modal" role="dialog" aria-modal="true" aria-label="Workout log" onClick={e => e.stopPropagation()}>
+            <div className="cal-title"><Dumbbell size={16} style={{ verticalAlign: '-2px' }} /> {fmtDate(askDate)} marked as Gym</div>
+            <p className="ask-text">{askHasLog ? 'This day already has a workout log. Do you want to update it?' : 'Do you want to add a workout log for this day?'}</p>
+            <div className="form-actions">
+              <button type="button" className="submit-btn" autoFocus onClick={goToLog}>{askHasLog ? 'Yes, update' : 'Yes, add'}</button>
+              <button type="button" className="tab-btn cancel-btn" onClick={() => setAskDate(null)}>Not now</button>
+            </div>
+          </div>
+        </div>,
+        document.body,
+      )}
       <WorkoutSection view={view} date={logDate} onDateChange={setLogDate} open={logOpen} onOpenChange={setLogOpen} />
     </div>
   );

@@ -111,7 +111,7 @@ const AURA_FRAG = /* glsl */ `
 `;
 
 // Aura layers from the body outwards: how far each is pushed out and how strong it is
-const AURA = [[0.006, 0.2], [0.014, 0.12], [0.026, 0.07], [0.042, 0.04]] as const;
+const AURA = [[0.004, 0.1], [0.009, 0.05], [0.016, 0.025]] as const;
 
 // Which file each body uses. `flip` turns a model that faces away from the camera (-z) round to face +z.
 const MODELS: Record<Gender, { file: string; flip: boolean }> = {
