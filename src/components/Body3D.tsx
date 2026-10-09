@@ -21,55 +21,68 @@ const VERT = /* glsl */ `
   }
 `;
 
-// Holographic look: glowing rim, fine horizontal contour lines, a sweeping band, and per-muscle heat tint.
-const FRAG = /* glsl */ `
+// Aura shells: the body pushed outwards a little, drawn from the inside, so a soft halo shows round the silhouette
+const AURA_VERT = /* glsl */ `
+  uniform float uOffset;
+  varying vec3 vPos;
+  void main() {
+    vPos = position;
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(position + normal * uOffset, 1.0);
+  }
+`;
+
+// Shared by the body and the aura: the per-muscle heat tint. Returns (tint colour, tint strength); `glow` is the hovered muscle.
+const ZONES_GLSL = /* glsl */ `
   #define NZ ${NZ}
-  uniform float uTime;
-  uniform float uMotion;
   uniform vec3 uZC[NZ];
   uniform vec3 uZR[NZ];
   uniform float uZSide[NZ];
   uniform float uWorked[NZ];
   uniform vec3 uZColor[NZ];
   uniform int uActive;
-  varying vec3 vPos;
-  varying vec3 vNormal;
 
   float smoothSide(float s, float d) {
     if (s == 0.0) return 1.0;
     return smoothstep(-0.004, 0.012, s * d);
   }
 
-  void main() {
-    vec3 n = normalize(vNormal);
-    if (!gl_FrontFacing) n = -n;
-    float fres = pow(1.0 - clamp(n.z, 0.0, 1.0), 2.2);
-
-    // fine horizontal contour lines (anti-aliased)
-    float v = vPos.y * 120.0 - uTime * 0.5 * uMotion;
-    float dist = min(fract(v), 1.0 - fract(v));
-    float line = 1.0 - smoothstep(0.06, 0.06 + fwidth(v) * 1.4, dist);
-
-    vec3 base = vec3(0.16, 0.5, 1.0);
-    vec3 col = base * (0.10 + 0.55 * line) + vec3(0.45, 0.8, 1.0) * fres * 1.1;
-    float alpha = 0.16 + 0.5 * line + 0.55 * fres;
-
-    // heat tint from the muscle zones
+  vec4 zoneTint(vec3 pos, out float glow) {
     float tint = 0.0;
     vec3 tintCol = vec3(0.0);
-    float glow = 0.0;
-    vec3 p = vec3(abs(vPos.x), vPos.y, vPos.z);
+    glow = 0.0;
+    vec3 p = vec3(abs(pos.x), pos.y, pos.z);
     for (int i = 0; i < NZ; i++) {
       vec3 q = (p - uZC[i]) / uZR[i];
-      float w = clamp((1.0 - dot(q, q)) * 2.0, 0.0, 1.0) * smoothSide(uZSide[i], vPos.z);
+      float w = clamp((1.0 - dot(q, q)) * 2.0, 0.0, 1.0) * smoothSide(uZSide[i], pos.z);
       if (uWorked[i] > 0.5) { tintCol += uZColor[i] * w; tint += w; }
       if (i == uActive) glow += w;
     }
     tint = min(tint, 1.0);
-    if (tint > 0.0) {
-      vec3 mixed = tintCol / max(tint, 0.0001);
-      col = mix(col, mixed * (0.45 + 0.5 * line + 0.5 * fres), tint * 0.9);
-      alpha = mix(alpha, max(alpha, 0.55 + 0.3 * line), tint);
+    return vec4(tint > 0.0 ? tintCol / max(tint, 0.0001) : vec3(0.0), tint);
+  }
+`;
+
+// The body: a softly glowing translucent skin with a bright rim, heat-tinted muscles and a sweeping white band.
+const FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uMotion;
+  varying vec3 vPos;
+  varying vec3 vNormal;
+  ${ZONES_GLSL}
+
+  void main() {
+    vec3 n = normalize(vNormal);
+    if (!gl_FrontFacing) n = -n;
+    float fres = pow(1.0 - clamp(n.z, 0.0, 1.0), 2.0);
+
+    vec3 col = vec3(0.2, 0.55, 1.0) * 0.5 + vec3(0.5, 0.82, 1.0) * fres;
+    float alpha = 0.4 + 0.5 * fres;
+
+    float glow;
+    vec4 z = zoneTint(vPos, glow);
+    if (z.a > 0.0) {
+      col = mix(col, z.rgb * (0.6 + 0.5 * fres), z.a * 0.9);
+      alpha = mix(alpha, max(alpha, 0.7), z.a);
     }
     col += glow * vec3(0.2, 0.25, 0.32);
     alpha = min(1.0, alpha + glow * 0.35);
@@ -80,6 +93,25 @@ const FRAG = /* glsl */ `
     gl_FragColor = vec4(col, alpha);
   }
 `;
+
+const AURA_FRAG = /* glsl */ `
+  uniform float uTime;
+  uniform float uMotion;
+  uniform float uAlpha;
+  varying vec3 vPos;
+  ${ZONES_GLSL}
+
+  void main() {
+    float glow;
+    vec4 z = zoneTint(vPos, glow);
+    vec3 col = mix(vec3(0.22, 0.58, 1.0), z.rgb, z.a * 0.85);
+    float breathe = 0.9 + 0.1 * sin(uTime * 1.4 * uMotion);
+    gl_FragColor = vec4(col, uAlpha * breathe * (1.0 + z.a * 0.6 + glow * 0.8));
+  }
+`;
+
+// Aura layers from the body outwards: how far each is pushed out and how strong it is
+const AURA = [[0.006, 0.2], [0.014, 0.12], [0.026, 0.07], [0.042, 0.04]] as const;
 
 // Which file each body uses. `flip` turns a model that faces away from the camera (-z) round to face +z.
 const MODELS: Record<Gender, { file: string; flip: boolean }> = {
@@ -174,6 +206,12 @@ export default function Body3D({ gender, muscles, max, onFail }: Body3DProps) {
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.FrontSide,
     });
 
+    const auraMaterials = AURA.map(([offset, alpha]) => new THREE.ShaderMaterial({
+      uniforms: { ...uniforms, uOffset: { value: offset }, uAlpha: { value: alpha } },
+      vertexShader: AURA_VERT, fragmentShader: AURA_FRAG,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.BackSide,
+    }));
+
     // Depth pre-pass: only the nearest surface glows, so the far side never shows through the body
     const depthOnly = new THREE.MeshBasicMaterial({ colorWrite: false, polygonOffset: true, polygonOffsetFactor: 2, polygonOffsetUnits: 2 });
     let pickMesh: THREE.Mesh | null = null;
@@ -214,7 +252,7 @@ export default function Body3D({ gender, muscles, max, onFail }: Body3DProps) {
       geometry = merged;
       pickMesh = new THREE.Mesh(merged, material);
       pickMesh.renderOrder = 1;
-      scene.add(new THREE.Mesh(merged, depthOnly), pickMesh);
+      scene.add(new THREE.Mesh(merged, depthOnly), pickMesh, ...auraMaterials.map(m => { const a = new THREE.Mesh(merged, m); a.renderOrder = 1; return a; }));
       pickMesh.updateMatrixWorld(true);
       setLoading(false);
     }, undefined, () => { if (!disposed) cb.current.onFail(); });
@@ -299,7 +337,7 @@ export default function Body3D({ gender, muscles, max, onFail }: Body3DProps) {
       io.disconnect(); ro.disconnect(); controls.dispose();
       canvas.removeEventListener('pointermove', onMove); canvas.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('pointerdown', onDown); canvas.removeEventListener('pointerup', onUp);
-      geometry?.dispose(); material.dispose(); depthOnly.dispose(); renderer.dispose();
+      geometry?.dispose(); material.dispose(); auraMaterials.forEach(m => m.dispose()); depthOnly.dispose(); renderer.dispose();
       canvas.remove();
     };
   }, [gender]);

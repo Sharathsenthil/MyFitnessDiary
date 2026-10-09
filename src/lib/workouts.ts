@@ -158,10 +158,10 @@ export function caloriesFor(ex: Exercise, amount: number, weightKg: number): num
   return (ex.kcalPerRep ?? 0.4) * amount * (weightKg / FALLBACK_WEIGHT_KG);
 }
 
-export type Period = 'week' | 'month' | 'all';
+export type Period = 'week' | 'month' | 'all' | 'custom';
 
 /** Inclusive [from, to] date strings, or null for all time. Weeks run Monday to Sunday. */
-export function periodRange(period: Period, today = new Date()): [string, string] | null {
+export function periodRange(period: Exclude<Period, 'custom'>, today = new Date()): [string, string] | null {
   if (period === 'all') return null;
   if (period === 'week') {
     const monday = addDays(today, -((today.getDay() + 6) % 7));
@@ -197,8 +197,8 @@ export interface WorkoutSummary {
   maxHits: number;
 }
 
-export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period: Period, weightKg: number, today = new Date()): WorkoutSummary {
-  const range = periodRange(period, today);
+/** `range` is an inclusive [from, to] pair of dates, or null for everything. */
+export function summarize(entries: WorkoutEntry[], exercises: Exercise[], range: [string, string] | null, weightKg: number): WorkoutSummary {
   const byId = new Map(exercises.map(e => [e.id, e]));
   const inRange = entries.filter(e => !range || (e.date >= range[0] && e.date <= range[1]));
 

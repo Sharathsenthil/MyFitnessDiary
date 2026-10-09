@@ -3,15 +3,18 @@ import { Plus, Trash2, Pencil, Flame, Timer, Repeat, Activity, Ban } from 'lucid
 import type { Exercise, MuscleId, ReportRecord, UserProfile, WorkoutEntry, WorkoutSet } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { useAuth } from '../lib/auth';
-import { MUSCLES, QUICK_IDS, caloriesFor, describeSets, entriesOn, latestWeight, mergeExercises, normName, searchExercises, summarize, type Period } from '../lib/workouts';
-import { DateField } from './DateField';
+import { MUSCLES, QUICK_IDS, caloriesFor, describeSets, entriesOn, latestWeight, mergeExercises, normName, periodRange, searchExercises, summarize, type Period } from '../lib/workouts';
+import { fmtDate, toDateStr } from '../lib/dates';
+import { CalendarPicker, DateButton } from './CalendarPicker';
 import { BodyMap } from './BodyMap';
 
 const PERIODS: { id: Period; label: string }[] = [
-  { id: 'week', label: 'This week' },
-  { id: 'month', label: 'This month' },
+  { id: 'week', label: 'Week' },
+  { id: 'month', label: 'Month' },
   { id: 'all', label: 'All time' },
+  { id: 'custom', label: 'Custom' },
 ];
+const weekday = (iso: string) => new Date(iso + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short' });
 
 const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${Math.round(m % 60)}m` : `${Math.round(m)} min`);
 const unitOf = (ex: Exercise) => (ex.mode === 'time' ? 'min' : 'reps');
@@ -22,7 +25,9 @@ const BLANK_DRAFT = { name: '', mode: 'time' as Exercise['mode'], muscles: [] as
  * Workout log for one date plus the weekly / monthly / all-time report.
  * The date and the "log form open" state live in the Calendar tab so tapping a day as Gym can open it.
  */
-export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
+export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }: {
+  /** 'log' = enter and edit the day's workouts; 'calendar' = the report shown under the calendar */
+  view: 'calendar' | 'log';
   date: string; onDateChange: (d: string) => void; open: boolean; onOpenChange: (o: boolean) => void;
 }) {
   const { isAdmin, save } = useAuth();
@@ -49,6 +54,9 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
   const [shared, setShared] = useState(BLANK_ROW);
   const [rows, setRows] = useState<{ reps: string; weight: string }[]>([]);
   const [period, setPeriod] = useState<Period>('week');
+  // Custom from-to range for the report (starts as the last 7 days)
+  const [customRange, setCustomRange] = useState<[string, string]>(() => { const t = new Date(); return [toDateStr(new Date(t.getFullYear(), t.getMonth(), t.getDate() - 6)), toDateStr(t)]; });
+  const [picker, setPicker] = useState<'day' | 'range' | null>(null);
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState(BLANK_DRAFT);
 
@@ -75,7 +83,9 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
   const dayEntries = entriesOn(logs, date);
   // Workouts on a day later marked Rest or Leave are kept but not counted in the report
   const counted = useMemo(() => logs.filter(l => !blocked.has(l.date)), [logs, blocked]);
-  const summary = useMemo(() => summarize(counted, exercises, period, weight), [counted, exercises, period, weight]);
+  const range = period === 'custom' ? customRange : periodRange(period);
+  const shownRange: [string, string] | null = range ?? (counted.length ? [counted.reduce((m, l) => (l.date < m ? l.date : m), counted[0].date), toDateStr(new Date())] : null);
+  const summary = useMemo(() => summarize(counted, exercises, range, weight), [counted, exercises, range?.[0], range?.[1], weight]);
   const dayKcal = dayEntries.reduce((s, e) => {
     const ex = exercises.find(x => x.id === e.exerciseId);
     return s + (ex ? caloriesFor(ex, e.amount, weight) : 0);
@@ -305,11 +315,14 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
 
   return (
     <>
-      <div className="glass-panel mb-6" id="workout-log">
-        <div className="chart-card-title">Workout log</div>
-        <p className="chart-card-hint">Pick a date to see, add, edit or delete its workouts.</p>
-
-        <DateField value={date} onChange={onDateChange} label="Workout date" />
+      {view === 'log' && <div className="glass-panel mb-6" id="workout-log">
+        <div className="log-head">
+          <div>
+            <div className="chart-card-title">Workout log</div>
+            <p className="chart-card-hint">Pick a day to see, add, edit or delete its workouts.</p>
+          </div>
+          <DateButton label="Choose the workout date" onClick={() => setPicker('day')}>{weekday(date)} {fmtDate(date)}</DateButton>
+        </div>
 
         {blockedDay && (
           <p className="day-note blocked"><Ban size={15} /> This day is marked {status === 'rest' ? 'Rest' : 'Leave'}, so workouts can&rsquo;t be added. Change the mark on the calendar first.</p>
@@ -346,17 +359,23 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
           </button>
         ))}
         {!isAdmin && <p className="calendar-hint">🔒 View only — log in as admin to add workouts</p>}
-      </div>
+      </div>}
 
-      <div className="glass-panel mb-6">
+      {view === 'calendar' && <div className="glass-panel mb-6">
         <div className="seg period-seg" role="tablist" aria-label="Report period">
           {PERIODS.map(p => (
             <button key={p.id} type="button" role="tab" aria-selected={period === p.id}
-              className={`chip ${period === p.id ? 'on' : ''}`} onClick={() => setPeriod(p.id)}>{p.label}</button>
+              className={`chip ${period === p.id ? 'on' : ''}`}
+              onClick={() => { setPeriod(p.id); if (p.id === 'custom') setPicker('range'); }}>{p.label}</button>
           ))}
         </div>
+        <div className="range-row">
+          <DateButton label="Choose the report date range" onClick={() => setPicker('range')}>
+            {shownRange ? `${fmtDate(shownRange[0])} → ${fmtDate(shownRange[1])}` : 'No workouts yet'}
+          </DateButton>
+        </div>
 
-        <div className="streak-grid" style={{ marginTop: '1rem' }}>
+        <div className="streak-grid">
           {stats.map(c => (
             <div key={c.label} className="streak-card">
               <div className="summary-label">{c.icon} {c.label}</div>
@@ -394,7 +413,15 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
             </ul>
           </>
         )}
-      </div>
+      </div>}
+
+      {picker === 'day' && (
+        <CalendarPicker mode="single" title="Workout date" value={date} onPick={onDateChange} onClose={() => setPicker(null)} />
+      )}
+      {picker === 'range' && (
+        <CalendarPicker mode="range" title="Report range" from={shownRange?.[0] ?? customRange[0]} to={shownRange?.[1] ?? customRange[1]}
+          onApply={(f, t) => { setCustomRange([f, t]); setPeriod('custom'); }} onClose={() => setPicker(null)} />
+      )}
     </>
   );
 }

@@ -392,6 +392,7 @@ button { touch-action: manipulation; }
 .seg { display: flex; gap: 0.4rem; margin: 0.5rem 0; }
 .seg .chip { flex: 1; justify-content: center; }
 .period-seg { max-width: 420px; margin: 0 auto; }
+.period-seg .chip { padding: 0.45rem 0.4rem; }
 .exercise-form { display: flex; flex-direction: column; gap: 0.5rem; padding: 0.9rem; margin-bottom: 0.9rem; border: 1px dashed var(--card-border); border-radius: 12px; }
 .add-row { display: flex; gap: 0.6rem; }
 .add-row .input-field { flex: 1; }
@@ -468,3 +469,34 @@ button { touch-action: manipulation; }
 .holo-tip.below { transform: translate(-50%, 18px); }
 .holo-tip strong { color: #fff; font-size: 0.98rem; white-space: nowrap; }
 .muscle-emoji { font-size: 1.05em; }
+
+/* compact date controls and the calendar pop-up */
+.log-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; }
+.log-head .chart-card-hint { margin-bottom: 0.5rem; }
+.date-btn { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.45rem; height: 40px; padding: 0 0.85rem; border: 1px solid var(--card-border); border-radius: 10px; background: var(--panel-bg); color: var(--text-main); font: inherit; font-size: 0.9rem; font-weight: 600; white-space: nowrap; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.date-btn svg { color: var(--text-muted); }
+@media (hover: hover) { .date-btn:hover { border-color: var(--accent); } }
+.range-row { display: flex; justify-content: center; margin: 0.7rem 0 1rem; }
+.log-btn { width: auto; min-height: 42px; padding: 0.55rem 1.2rem; margin-top: 0.9rem; }
+.cal-modal { max-width: 340px; padding: 1rem; }
+.cal-title { font-weight: 700; font-size: 1rem; margin-bottom: 0.6rem; }
+.cal-presets { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 0.6rem; }
+.cal-presets .chip { padding: 0.3rem 0.7rem; font-size: 0.8rem; }
+.cal-nav { display: flex; align-items: center; justify-content: space-between; margin: 0.2rem 0 0.4rem; }
+.cal-nav strong { font-size: 0.98rem; white-space: nowrap; }
+.cal-nav .icon-btn:disabled { opacity: 0.3; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); row-gap: 2px; }
+.cal-wd { text-align: center; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); padding: 0.25rem 0; }
+.cal-day { height: 40px; border: none; background: transparent; color: var(--text-main); font: inherit; font-size: 0.92rem; border-radius: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.cal-day:disabled { color: var(--text-muted); opacity: 0.35; cursor: default; }
+.cal-day.today { box-shadow: inset 0 0 0 1px var(--text-muted); }
+.cal-day.in { background: rgba(203,245,92,0.28); border-radius: 0; }
+.cal-day.sel { background: var(--accent); color: var(--accent-text); font-weight: 700; }
+.cal-day.cap-l { border-radius: 10px 0 0 10px; }
+.cal-day.cap-r { border-radius: 0 10px 10px 0; }
+@media (hover: hover) { .cal-day:not(:disabled):not(.sel):hover { background: var(--hover-bg); } }
+.cal-summary { margin: 0.7rem 0; font-size: 0.88rem; text-align: center; color: var(--text-muted); white-space: nowrap; }
+.cal-modal .form-actions { margin-top: 0.7rem; }
+.view-seg { max-width: 360px; margin: 0 auto 1rem; }
+.view-seg .chip { white-space: nowrap; }
+#workout-log { max-width: 720px; margin-left: auto; margin-right: auto; }

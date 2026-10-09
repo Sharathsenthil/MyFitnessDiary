@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Dumbbell, X, Moon } from 'lucide-react';
+import { Dumbbell, X, Moon, CalendarDays, ClipboardList } from 'lucide-react';
 import type { DayStatus, UserProfile } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { fmtDate, parseDateStr, toDateStr } from '../lib/dates';
@@ -7,6 +7,7 @@ import { useAuth } from '../lib/auth';
 import { computeStreaks } from '../lib/streaks';
 import { StreakPanel } from '../components/StreakPanel';
 import { WorkoutSection } from '../components/WorkoutSection';
+import { scrollToTop } from '../lib/scroll';
 
 export function DailyLogTab() {
   const { isAdmin, save } = useAuth();
@@ -18,6 +19,7 @@ export function DailyLogTab() {
   // The workout log follows the day you mark as Gym, and opens so you can enter what you did
   const [logDate, setLogDate] = useState(toDateStr(new Date()));
   const [logOpen, setLogOpen] = useState(false);
+  const [view, setView] = useState<'calendar' | 'log'>('calendar');
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -52,10 +54,8 @@ export function DailyLogTab() {
     const rest = next === 'rest' ? [...without(restDates), dayStr] : without(restDates);
     setGymDates(gym); setLeaveDates(leave); setRestDates(rest);
     save({ gymDates: gym, leaveDates: leave, restDates: rest });
-    if (next === 'gym') {
-      setLogDate(dayStr); setLogOpen(true);
-      setTimeout(() => document.getElementById('workout-log')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-    }
+    // Marking a day as Gym takes you straight to the workout log for that day, ready to fill in
+    if (next === 'gym') { setLogDate(dayStr); setLogOpen(true); setView('log'); scrollToTop(false); }
   };
 
   const days: ReactNode[] = [];
@@ -98,8 +98,17 @@ export function DailyLogTab() {
 
   return (
     <div className="tab-content fade-in">
-      <StreakPanel stats={streaks} />
-      <div className="glass-panel mb-6">
+      <div className="seg view-seg" role="tablist" aria-label="Calendar sections">
+        <button type="button" role="tab" aria-selected={view === 'calendar'} className={`chip ${view === 'calendar' ? 'on' : ''}`} onClick={() => setView('calendar')}>
+          <CalendarDays size={16} /> Calendar
+        </button>
+        <button type="button" role="tab" aria-selected={view === 'log'} className={`chip ${view === 'log' ? 'on' : ''}`} onClick={() => setView('log')}>
+          <ClipboardList size={16} /> Workout log
+        </button>
+      </div>
+
+      {view === 'calendar' && <StreakPanel stats={streaks} />}
+      {view === 'calendar' && <div className="glass-panel mb-6">
         {/* Month nav */}
         <div className="flex justify-between items-center mb-4">
           <button onClick={() => setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1))} className="tab-btn month-btn" aria-label="Previous month">‹</button>
@@ -159,8 +168,8 @@ export function DailyLogTab() {
         <p className="calendar-hint">
           {isAdmin ? 'Tap a day to cycle its mark. A 4th tap clears it.' : '🔒 View only — log in as admin to edit'}
         </p>
-      </div>
-      <WorkoutSection date={logDate} onDateChange={setLogDate} open={logOpen} onOpenChange={setLogOpen} />
+      </div>}
+      <WorkoutSection view={view} date={logDate} onDateChange={setLogDate} open={logOpen} onOpenChange={setLogOpen} />
     </div>
   );
 }
