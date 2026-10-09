@@ -403,20 +403,31 @@ button { touch-action: manipulation; }
 .entry-kcal { min-width: 4.5rem; text-align: right; }
 .entry-total { justify-content: space-between; font-weight: 700; }
 .icon-btn { background: none; border: none; color: var(--text-muted); padding: 0.35rem; cursor: pointer; display: inline-flex; }
-.muscle-layout { display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap; justify-content: center; }
-.body-map { display: flex; gap: 0.75rem; flex: 0 0 auto; }
-.body-fig { margin: 0; text-align: center; font-size: 0.78rem; color: var(--text-muted); }
-.body-fig svg { width: 120px; height: auto; display: block; }
-.body-base * { fill: var(--card-border); }
-.muscle { fill: var(--card-border); stroke: var(--card-bg); stroke-width: 0.6; }
-.muscle.hit { fill: #f97316; }
-.muscle-list { list-style: none; margin: 0; padding: 0; flex: 1; min-width: 220px; }
+/* hologram */
+.holo { background: radial-gradient(ellipse at 50% 30%, #0b2a3a 0%, #06111c 70%); border: 1px solid rgba(34,211,238,0.35); border-radius: 16px; padding: 0.9rem 0.6rem 0.8rem; box-shadow: inset 0 0 40px rgba(34,211,238,0.08), 0 0 24px rgba(34,211,238,0.08); margin-bottom: 1rem; }
+.body-map { display: flex; justify-content: center; gap: 0.5rem; }
+.body-fig { margin: 0; flex: 1 1 0; max-width: 190px; text-align: center; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: #67e8f9; }
+.body-fig svg { width: 100%; height: auto; display: block; overflow: visible; }
+.holo-body { stroke: #22d3ee; stroke-width: 1; stroke-opacity: 0.75; }
+.holo-ring { fill: none; stroke: #22d3ee; stroke-width: 1; stroke-opacity: 0.6; }
+.holo-ring.faint { stroke-opacity: 0.3; }
+.holo-muscle { color: #22d3ee; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.holo-muscle * { fill: rgba(34,211,238,0.08); stroke: #22d3ee; stroke-opacity: 0.45; stroke-width: 0.8; transition: fill 0.2s, stroke 0.2s; }
+.holo-muscle.worked * { fill: currentColor; fill-opacity: 0.55; stroke: currentColor; stroke-opacity: 0.95; }
+.holo-muscle.active * { fill-opacity: 0.85; stroke: #fff; stroke-opacity: 1; stroke-width: 1.4; }
+.holo-readout { display: flex; flex-direction: column; gap: 0.15rem; min-height: 4.4rem; margin: 0.6rem 0.4rem 0; padding: 0.6rem 0.8rem; border: 1px solid rgba(34,211,238,0.3); border-radius: 10px; background: rgba(34,211,238,0.06); color: #cffafe; font-size: 0.88rem; }
+.holo-readout strong { color: #fff; font-size: 1rem; }
+.holo-sources { color: #67e8f9; font-size: 0.8rem; }
+.holo-hint { color: #67e8f9; opacity: 0.8; margin: auto 0; text-align: center; }
+.holo-scale { display: flex; align-items: center; gap: 0.5rem; margin: 0.6rem 0.4rem 0; font-size: 0.72rem; color: #67e8f9; }
+.holo-scale i { flex: 1; height: 5px; border-radius: 3px; background: linear-gradient(90deg, hsl(185 100% 58%), hsl(95 100% 55%), hsl(10 100% 52%)); }
+@media (prefers-reduced-motion: reduce) { .holo-scan { display: none; } }
+.muscle-list { list-style: none; margin: 0; padding: 0; }
 .muscle-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0; font-size: 0.88rem; }
 .muscle-name { width: 5.5rem; white-space: nowrap; }
 .muscle-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--card-border); overflow: hidden; }
 .muscle-bar i { display: block; height: 100%; background: #f97316; border-radius: 3px; }
 .muscle-n { width: 2rem; text-align: right; white-space: nowrap; color: var(--text-muted); }
-@media (max-width: 480px) { .body-fig svg { width: 100px; } .muscle-list { min-width: 0; flex: 1 1 100%; } }
 .suggest { list-style: none; margin: 0.4rem 0 0.9rem; padding: 0.25rem; border: 1px solid var(--card-border); border-radius: 12px; background: var(--panel-bg); max-height: 260px; overflow-y: auto; }
 .suggest button { display: flex; align-items: center; gap: 0.5rem; width: 100%; text-align: left; background: none; border: none; border-radius: 8px; padding: 0.7rem 0.75rem; font: inherit; font-size: 0.95rem; color: var(--text-main); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .suggest button[aria-selected="true"] { background: var(--accent); color: var(--accent-text); font-weight: 700; }
@@ -437,3 +448,12 @@ button { touch-action: manipulation; }
 .set-row .input-field { flex: 1; min-width: 0; }
 .set-no { width: 3.6rem; flex: 0 0 auto; font-size: 0.88rem; color: var(--text-muted); white-space: nowrap; }
 .entry-sub { display: block; font-size: 0.8rem; font-weight: 400; color: var(--text-muted); white-space: normal; }
+.day-note { display: flex; align-items: center; gap: 0.4rem; margin: 0.8rem 0 0; font-size: 0.88rem; color: var(--text-muted); }
+.day-note.blocked { padding: 0.6rem 0.75rem; border-radius: 10px; background: rgba(239,68,68,0.1); color: var(--danger); align-items: flex-start; }
+.day-note.blocked svg { flex: 0 0 auto; margin-top: 0.15rem; }
+.log-btn { margin-top: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 0.4rem; }
+.log-form { margin-top: 0.9rem; padding-top: 0.9rem; border-top: 1px solid var(--card-border); }
+.form-actions { display: flex; gap: 0.6rem; }
+.form-actions .submit-btn { flex: 1; }
+.cancel-btn { border: 1px solid var(--card-border); justify-content: center; }
+.entry-list li.editing { background: var(--hover-bg); border-radius: 8px; }

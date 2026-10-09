@@ -171,7 +171,18 @@ export function periodRange(period: Period, today = new Date()): [string, string
 }
 
 export interface ExerciseTotal { exercise: Exercise; amount: number; sessions: number; kcal: number; volume: number; maxWeight: number }
-export interface MuscleTotal { id: MuscleId; label: string; hits: number }
+export interface MuscleTotal {
+  id: MuscleId;
+  label: string;
+  /** Times this muscle was worked (once per logged workout that targets it) */
+  hits: number;
+  /** Share of all muscle hits, 0-100 */
+  share: number;
+  minutes: number;
+  reps: number;
+  /** Workouts that hit it, most frequent first */
+  sources: { name: string; count: number }[];
+}
 export interface WorkoutSummary {
   days: number;
   sessions: number;
@@ -192,6 +203,7 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
 
   const totals = new Map<string, ExerciseTotal>();
   const hits = new Map<MuscleId, number>();
+  const detail = new Map<MuscleId, { minutes: number; reps: number; sources: Map<string, number> }>();
   const days = new Set<string>();
   let minutes = 0, repCount = 0, kcal = 0, volume = 0;
 
@@ -208,10 +220,25 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
     t.volume += vol; volume += vol;
     t.maxWeight = Math.max(t.maxWeight, ...(entry.sets ?? []).map(x => x.weight));
     totals.set(ex.id, t);
-    for (const m of ex.muscles) hits.set(m, (hits.get(m) ?? 0) + 1);
+    for (const m of ex.muscles) {
+      hits.set(m, (hits.get(m) ?? 0) + 1);
+      const d = detail.get(m) ?? { minutes: 0, reps: 0, sources: new Map<string, number>() };
+      if (ex.mode === 'time') d.minutes += entry.amount; else d.reps += entry.amount;
+      d.sources.set(ex.name, (d.sources.get(ex.name) ?? 0) + 1);
+      detail.set(m, d);
+    }
   }
 
-  const byMuscle = MUSCLES.map(m => ({ ...m, hits: hits.get(m.id) ?? 0 }));
+  const totalHits = [...hits.values()].reduce((a, b) => a + b, 0);
+  const byMuscle: MuscleTotal[] = MUSCLES.map(m => {
+    const d = detail.get(m.id);
+    const n = hits.get(m.id) ?? 0;
+    return {
+      ...m, hits: n, share: totalHits ? Math.round((n / totalHits) * 100) : 0,
+      minutes: d?.minutes ?? 0, reps: d?.reps ?? 0,
+      sources: d ? [...d.sources].map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count) : [],
+    };
+  });
   return {
     days: days.size,
     sessions: [...totals.values()].reduce((s, t) => s + t.sessions, 0),

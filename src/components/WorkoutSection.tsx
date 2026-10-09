@@ -1,9 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Plus, Trash2, Flame, Timer, Repeat, Activity } from 'lucide-react';
+import { Plus, Trash2, Pencil, Flame, Timer, Repeat, Activity, Ban } from 'lucide-react';
 import type { Exercise, MuscleId, ReportRecord, WorkoutEntry, WorkoutSet } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { useAuth } from '../lib/auth';
-import { toDateStr } from '../lib/dates';
 import { MUSCLES, QUICK_IDS, caloriesFor, describeSets, entriesOn, latestWeight, mergeExercises, normName, searchExercises, summarize, type Period } from '../lib/workouts';
 import { DateField } from './DateField';
 import { BodyMap } from './BodyMap';
@@ -16,37 +15,50 @@ const PERIODS: { id: Period; label: string }[] = [
 
 const fmtMin = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${Math.round(m % 60)}m` : `${Math.round(m)} min`);
 const unitOf = (ex: Exercise) => (ex.mode === 'time' ? 'min' : 'reps');
+const BLANK_ROW = { reps: '', weight: '' };
+const BLANK_DRAFT = { name: '', mode: 'time' as Exercise['mode'], muscles: [] as MuscleId[], intensity: '' };
 
-export function WorkoutSection() {
+/**
+ * Workout log for one date plus the weekly / monthly / all-time report.
+ * The date and the "log form open" state live in the Calendar tab so tapping a day as Gym can open it.
+ */
+export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
+  date: string; onDateChange: (d: string) => void; open: boolean; onOpenChange: (o: boolean) => void;
+}) {
   const { isAdmin, save } = useAuth();
   const [rawLogs, setLogs] = useLocalStorage<WorkoutEntry[]>('workoutLogs', []);
   const [custom, setCustom] = useLocalStorage<Exercise[]>('customExercises', []);
   const [reports] = useLocalStorage<ReportRecord[]>('progressData', []);
   const [gymDates, setGymDates] = useLocalStorage<string[]>('gymDates', []);
-  const [leaveDates, setLeaveDates] = useLocalStorage<string[]>('leaveDates', []);
-  const [restDates, setRestDates] = useLocalStorage<string[]>('restDates', []);
+  const [leaveDates] = useLocalStorage<string[]>('leaveDates', []);
+  const [restDates] = useLocalStorage<string[]>('restDates', []);
 
   const { list: exercises, alias } = useMemo(() => mergeExercises(custom), [custom]);
   // Older entries of a custom workout that now matches a preset are counted under the preset
   const logs = useMemo(() => rawLogs.map(l => alias.has(l.exerciseId) ? { ...l, exerciseId: alias.get(l.exerciseId)! } : l), [rawLogs, alias]);
   const weight = latestWeight(reports);
 
-  const [date, setDate] = useState(toDateStr(new Date()));
   const [pickedId, setPickedId] = useState<string | null>(QUICK_IDS[0]);
   const [query, setQuery] = useState('');
   const [amount, setAmount] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
   // Counted workouts: sets of reps at a weight, the same for every set or set by set
   const [setCount, setSetCount] = useState('3');
   const [sameWeight, setSameWeight] = useState(true);
-  const [shared, setShared] = useState({ reps: '', weight: '' });
+  const [shared, setShared] = useState(BLANK_ROW);
   const [rows, setRows] = useState<{ reps: string; weight: string }[]>([]);
-  const nSets = Math.min(20, Math.max(1, Math.floor(Number(setCount)) || 1));
-  const rowAt = (i: number) => rows[i] ?? { reps: '', weight: '' };
-  const patchRow = (i: number, patch: Partial<{ reps: string; weight: string }>) =>
-    setRows(r => Array.from({ length: Math.max(r.length, i + 1) }, (_, k) => (k === i ? { ...(r[k] ?? { reps: '', weight: '' }), ...patch } : r[k] ?? { reps: '', weight: '' })));
   const [period, setPeriod] = useState<Period>('week');
   const [adding, setAdding] = useState(false);
-  const [draft, setDraft] = useState({ name: '', mode: 'time' as Exercise['mode'], muscles: [] as MuscleId[], intensity: '' });
+  const [draft, setDraft] = useState(BLANK_DRAFT);
+
+  const nSets = Math.min(20, Math.max(1, Math.floor(Number(setCount)) || 1));
+  const rowAt = (i: number) => rows[i] ?? BLANK_ROW;
+  const patchRow = (i: number, patch: Partial<typeof BLANK_ROW>) =>
+    setRows(r => Array.from({ length: Math.max(r.length, i + 1) }, (_, k) => (k === i ? { ...(r[k] ?? BLANK_ROW), ...patch } : r[k] ?? BLANK_ROW)));
+
+  const status = gymDates.includes(date) ? 'gym' : leaveDates.includes(date) ? 'leave' : restDates.includes(date) ? 'rest' : null;
+  const blockedDay = status === 'rest' || status === 'leave';
+  const blocked = useMemo(() => new Set([...leaveDates, ...restDates]), [leaveDates, restDates]);
 
   const picked = exercises.find(e => e.id === pickedId) ?? null;
   const matches = useMemo(() => searchExercises(exercises, query), [exercises, query]);
@@ -60,43 +72,66 @@ export function WorkoutSection() {
 
   const pick = (ex: Exercise) => { setPickedId(ex.id); setQuery(''); setAdding(false); };
   const dayEntries = entriesOn(logs, date);
-  const summary = useMemo(() => summarize(logs, exercises, period, weight), [logs, exercises, period, weight]);
-  const hits = Object.fromEntries(summary.byMuscle.map(m => [m.id, m.hits])) as Record<MuscleId, number>;
+  // Workouts on a day later marked Rest or Leave are kept but not counted in the report
+  const counted = useMemo(() => logs.filter(l => !blocked.has(l.date)), [logs, blocked]);
+  const summary = useMemo(() => summarize(counted, exercises, period, weight), [counted, exercises, period, weight]);
   const dayKcal = dayEntries.reduce((s, e) => {
     const ex = exercises.find(x => x.id === e.exerciseId);
     return s + (ex ? caloriesFor(ex, e.amount, weight) : 0);
   }, 0);
 
-  const addEntry = (e: FormEvent) => {
+  const resetForm = () => {
+    setEditingId(null); setQuery(''); setAmount(''); setAdding(false); setDraft(BLANK_DRAFT);
+    setSetCount('3'); setSameWeight(true); setShared(BLANK_ROW); setRows([]);
+  };
+  const closeForm = () => { resetForm(); onOpenChange(false); };
+
+  const startEdit = (en: WorkoutEntry) => {
+    setEditingId(en.id); setPickedId(en.exerciseId); setQuery(''); setAdding(false);
+    const ex = exercises.find(x => x.id === en.exerciseId);
+    if (ex?.mode === 'time') setAmount(String(en.amount));
+    else {
+      const sets = en.sets?.length ? en.sets : [{ reps: en.amount, weight: 0 }];
+      const same = sets.every(s => s.reps === sets[0].reps && s.weight === sets[0].weight);
+      const text = (s: WorkoutSet) => ({ reps: String(s.reps), weight: s.weight > 0 ? String(s.weight) : '' });
+      setSetCount(String(sets.length)); setSameWeight(same);
+      setShared(text(sets[0])); setRows(sets.map(text));
+    }
+    onOpenChange(true);
+  };
+
+  const submitEntry = (e: FormEvent) => {
     e.preventDefault();
-    if (!isAdmin || !picked) return;
+    if (!isAdmin || !picked || blockedDay) return;
+    const id = editingId ?? `${Date.now()}`;
     let entry: WorkoutEntry;
     if (picked.mode === 'time') {
       const n = Number(amount);
       if (!(n > 0)) return;
-      entry = { id: `${Date.now()}`, date, exerciseId: picked.id, amount: n };
+      entry = { id, date, exerciseId: picked.id, amount: n };
     } else {
       const sets: WorkoutSet[] = Array.from({ length: nSets }, (_, i) => {
         const r = sameWeight ? shared : rowAt(i);
         return { reps: Math.floor(Number(r.reps)), weight: Math.max(0, Number(r.weight) || 0) };
       });
       if (sets.some(x => !(x.reps > 0))) return;
-      entry = { id: `${Date.now()}`, date, exerciseId: picked.id, amount: sets.reduce((t, x) => t + x.reps, 0), sets };
+      entry = { id, date, exerciseId: picked.id, amount: sets.reduce((t, x) => t + x.reps, 0), sets };
     }
-    const next = [...rawLogs, entry];
-    // A logged workout means you went to the gym that day
-    const gym = gymDates.includes(date) ? gymDates : [...gymDates, date];
-    const leave = leaveDates.filter(d => d !== date);
-    const rest = restDates.filter(d => d !== date);
-    setLogs(next); setGymDates(gym); setLeaveDates(leave); setRestDates(rest);
-    save({ workoutLogs: next, gymDates: gym, leaveDates: leave, restDates: rest });
-    setAmount('');
-    setShared(sh => ({ ...sh, reps: '' })); setRows([]);
+    const next = editingId ? rawLogs.map(l => (l.id === editingId ? entry : l)) : [...rawLogs, entry];
+    setLogs(next);
+    // A logged workout on an unmarked day makes it a gym day
+    if (!gymDates.includes(date)) {
+      const gym = [...gymDates, date];
+      setGymDates(gym);
+      save({ workoutLogs: next, gymDates: gym });
+    } else save({ workoutLogs: next });
+    if (editingId) closeForm(); else { setAmount(''); setShared(sh => ({ ...sh, reps: '' })); setRows([]); }
   };
 
   const removeEntry = (id: string) => {
     const next = rawLogs.filter(l => l.id !== id);
     setLogs(next); save({ workoutLogs: next });
+    if (editingId === id) closeForm();
   };
 
   const addExercise = (e: FormEvent) => {
@@ -105,7 +140,7 @@ export function WorkoutSection() {
     if (!isAdmin || !name) return;
     // Same name as an existing workout: use that one instead of creating a duplicate
     const existing = exercises.find(x => normName(x.name) === normName(name));
-    if (existing) { pick(existing); setDraft({ name: '', mode: 'time', muscles: [], intensity: '' }); return; }
+    if (existing) { pick(existing); setDraft(BLANK_DRAFT); return; }
     const intensity = Number(draft.intensity);
     const ex: Exercise = {
       id: `c${Date.now()}`, name, mode: draft.mode, muscles: draft.muscles,
@@ -114,7 +149,7 @@ export function WorkoutSection() {
     const next = [...custom, ex];
     setCustom(next); save({ customExercises: next });
     pick(ex);
-    setDraft({ name: '', mode: 'time', muscles: [], intensity: '' });
+    setDraft(BLANK_DRAFT);
   };
 
   const removeExercise = (id: string) => {
@@ -134,157 +169,182 @@ export function WorkoutSection() {
     { icon: <Flame size={18} color="var(--warning)" />, label: 'Calories', value: Math.round(summary.kcal), unit: 'kcal' },
   ];
 
-  return (
-    <>
-      <div className="glass-panel mb-6">
-        <div className="chart-card-title">Log a workout</div>
-        <p className="chart-card-hint">Pick a workout, enter minutes or reps, and add it to the day.</p>
+  const form = (
+    <div className="log-form">
+      <label className="field-label" htmlFor="workout-search">Workout</label>
+      <input id="workout-search" className="input-field" autoComplete="off" autoCapitalize="words" maxLength={40}
+        placeholder="Type to search, e.g. chest" value={query}
+        onChange={e => { setQuery(e.target.value); setAdding(false); }}
+        onKeyDown={e => {
+          if (e.key !== 'Enter' || !query.trim()) return;
+          e.preventDefault();
+          if (exactMatch) pick(exactMatch);
+          else if (matches[0]) pick(matches[0]);
+          else { setDraft(d => ({ ...d, name: query.trim() })); setAdding(true); }
+        }} />
 
-        <DateField value={date} onChange={setDate} label="Workout date" />
+      {query.trim() ? (
+        <ul className="suggest" role="listbox" aria-label="Matching workouts">
+          {matches.map(ex => (
+            <li key={ex.id}>
+              <button type="button" role="option" aria-selected={ex.id === pickedId} onClick={() => pick(ex)}>
+                <span className="suggest-name">{ex.name}</span>
+                <span className="suggest-meta">{ex.mode === 'time' ? 'minutes' : 'reps'}</span>
+              </button>
+            </li>
+          ))}
+          {!exactMatch && (
+            <li>
+              <button type="button" className="suggest-new" onClick={() => { setDraft(d => ({ ...d, name: query.trim() })); setAdding(true); }}>
+                <Plus size={14} /> <span className="suggest-name">Add &ldquo;{query.trim()}&rdquo; as new workout</span>
+              </button>
+            </li>
+          )}
+        </ul>
+      ) : (
+        <div className="chip-row" role="radiogroup" aria-label="Quick workouts">
+          {quick.map(ex => (
+            <button key={ex.id} type="button" role="radio" aria-checked={ex.id === pickedId}
+              className={`chip ${ex.id === pickedId ? 'on' : ''}`} onClick={() => pick(ex)}>
+              {ex.name}
+            </button>
+          ))}
+          {picked && !quick.some(q => q.id === picked.id) && <button type="button" role="radio" aria-checked className="chip on">{picked.name}</button>}
+        </div>
+      )}
 
-        <label className="field-label" htmlFor="workout-search" style={{ marginTop: '0.9rem' }}>Workout</label>
-        <input id="workout-search" className="input-field" autoComplete="off" autoCapitalize="words" maxLength={40}
-          placeholder="Type to search, e.g. chest" value={query}
-          onChange={e => { setQuery(e.target.value); setAdding(false); }}
-          onKeyDown={e => {
-            if (e.key !== 'Enter' || !query.trim()) return;
-            e.preventDefault();
-            if (exactMatch) pick(exactMatch);
-            else if (matches[0]) pick(matches[0]);
-            else if (isAdmin) { setDraft(d => ({ ...d, name: query.trim() })); setAdding(true); }
-          }} />
-
-        {query.trim() ? (
-          <ul className="suggest" role="listbox" aria-label="Matching workouts">
-            {matches.map(ex => (
-              <li key={ex.id}>
-                <button type="button" role="option" aria-selected={ex.id === pickedId} onClick={() => pick(ex)}>
-                  <span className="suggest-name">{ex.name}</span>
-                  <span className="suggest-meta">{ex.mode === 'time' ? 'minutes' : 'reps'}</span>
-                </button>
-              </li>
-            ))}
-            {!exactMatch && isAdmin && (
-              <li>
-                <button type="button" className="suggest-new" onClick={() => { setDraft(d => ({ ...d, name: query.trim() })); setAdding(true); }}>
-                  <Plus size={14} /> <span className="suggest-name">Add &ldquo;{query.trim()}&rdquo; as new workout</span>
-                </button>
-              </li>
-            )}
-            {matches.length === 0 && !isAdmin && <li className="suggest-empty">No matching workout</li>}
-          </ul>
-        ) : (
-          <div className="chip-row" role="radiogroup" aria-label="Quick workouts">
-            {quick.map(ex => (
-              <button key={ex.id} type="button" role="radio" aria-checked={ex.id === pickedId}
-                className={`chip ${ex.id === pickedId ? 'on' : ''}`} onClick={() => pick(ex)}>
-                {ex.name}
+      {adding && (
+        <form className="exercise-form" onSubmit={addExercise}>
+          <input className="input-field" placeholder="Workout name (e.g. Chest press)" maxLength={40} required
+            value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
+          <div className="seg">
+            {(['time', 'reps'] as const).map(m => (
+              <button key={m} type="button" className={`chip ${draft.mode === m ? 'on' : ''}`}
+                onClick={() => setDraft(d => ({ ...d, mode: m, intensity: '' }))}>
+                {m === 'time' ? 'Minutes' : 'Reps'}
               </button>
             ))}
-            {picked && !quick.some(q => q.id === picked.id) && <button type="button" role="radio" aria-checked className="chip on">{picked.name}</button>}
           </div>
-        )}
-
-        {isAdmin && adding && (
-          <form className="exercise-form" onSubmit={addExercise}>
-            <input className="input-field" placeholder="Workout name (e.g. Chest press)" maxLength={40} required
-              value={draft.name} onChange={e => setDraft(d => ({ ...d, name: e.target.value }))} />
-            <div className="seg">
-              {(['time', 'reps'] as const).map(m => (
-                <button key={m} type="button" className={`chip ${draft.mode === m ? 'on' : ''}`}
-                  onClick={() => setDraft(d => ({ ...d, mode: m, intensity: '' }))}>
-                  {m === 'time' ? 'Minutes' : 'Reps'}
-                </button>
-              ))}
-            </div>
-            <label className="field-label">Muscles it works</label>
-            <div className="chip-row tight">
-              {MUSCLES.map(m => (
-                <button key={m.id} type="button" className={`chip ${draft.muscles.includes(m.id) ? 'on' : ''}`} onClick={() => toggleMuscle(m.id)}>
-                  {m.label}
-                </button>
-              ))}
-            </div>
-            <input className="input-field" type="number" step="0.1" min="0" inputMode="decimal"
-              placeholder={draft.mode === 'time' ? 'Intensity (MET), default 5' : 'Calories per rep, default 0.4'}
-              value={draft.intensity} onChange={e => setDraft(d => ({ ...d, intensity: e.target.value }))} />
-            <button type="submit" className="submit-btn">Save workout</button>
-            {custom.length > 0 && (
-              <>
-                <label className="field-label">Remove a workout</label>
-                <div className="chip-row tight">
-                  {custom.filter(c => !alias.has(c.id)).map(c => {
-                    const used = rawLogs.some(l => l.exerciseId === c.id);
-                    return (
-                      <button key={c.id} type="button" className="chip danger" disabled={used}
-                        title={used ? 'Already logged, so it cannot be removed' : `Remove ${c.name}`} onClick={() => removeExercise(c.id)}>
-                        <Trash2 size={13} /> {c.name}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
-          </form>
-        )}
-
-        {isAdmin ? (
-          picked?.mode === 'reps' ? (
-            <form className="sets-form" onSubmit={addEntry}>
-              <div className="sets-head">
-                <label className="field-label" htmlFor="set-count">Sets</label>
-                <input id="set-count" className="input-field sets-count" type="number" min="1" max="20" step="1" inputMode="numeric"
-                  value={setCount} onChange={e => setSetCount(e.target.value)} />
-                <label className="check">
-                  <input type="checkbox" checked={sameWeight} onChange={e => setSameWeight(e.target.checked)} />
-                  <span>Same weight for all sets</span>
-                </label>
+          <label className="field-label">Muscles it works</label>
+          <div className="chip-row tight">
+            {MUSCLES.map(m => (
+              <button key={m.id} type="button" className={`chip ${draft.muscles.includes(m.id) ? 'on' : ''}`} onClick={() => toggleMuscle(m.id)}>
+                {m.label}
+              </button>
+            ))}
+          </div>
+          <input className="input-field" type="number" step="0.1" min="0" inputMode="decimal"
+            placeholder={draft.mode === 'time' ? 'Intensity (MET), default 5' : 'Calories per rep, default 0.4'}
+            value={draft.intensity} onChange={e => setDraft(d => ({ ...d, intensity: e.target.value }))} />
+          <button type="submit" className="submit-btn">Save workout</button>
+          {custom.some(c => !alias.has(c.id)) && (
+            <>
+              <label className="field-label">Remove a workout</label>
+              <div className="chip-row tight">
+                {custom.filter(c => !alias.has(c.id)).map(c => {
+                  const used = rawLogs.some(l => l.exerciseId === c.id);
+                  return (
+                    <button key={c.id} type="button" className="chip danger" disabled={used}
+                      title={used ? 'Already logged, so it cannot be removed' : `Remove ${c.name}`} onClick={() => removeExercise(c.id)}>
+                      <Trash2 size={13} /> {c.name}
+                    </button>
+                  );
+                })}
               </div>
-              {sameWeight ? (
-                <div className="set-row">
-                  <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required placeholder="Reps per set"
-                    value={shared.reps} onChange={e => setShared(sh => ({ ...sh, reps: e.target.value }))} />
-                  <input className="input-field" type="number" min="0" step="0.5" inputMode="decimal" placeholder="Weight (kg)"
-                    value={shared.weight} onChange={e => setShared(sh => ({ ...sh, weight: e.target.value }))} />
-                </div>
-              ) : Array.from({ length: nSets }, (_, i) => (
-                <div className="set-row" key={i}>
-                  <span className="set-no">Set {i + 1}</span>
-                  <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required placeholder="Reps"
-                    value={rowAt(i).reps} onChange={e => patchRow(i, { reps: e.target.value })} />
-                  <input className="input-field" type="number" min="0" step="0.5" inputMode="decimal" placeholder="kg"
-                    value={rowAt(i).weight} onChange={e => patchRow(i, { weight: e.target.value })} />
-                </div>
-              ))}
-              <p className="section-note" style={{ margin: 0 }}>Leave weight empty for bodyweight moves.</p>
-              <button type="submit" className="submit-btn"><Plus size={16} style={{ verticalAlign: '-3px' }} /> Add</button>
-            </form>
-          ) : (
-            <form className="add-row" onSubmit={addEntry}>
-              <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required
-                placeholder={picked ? 'Minutes' : 'Pick a workout first'} disabled={!picked} value={amount} onChange={e => setAmount(e.target.value)} />
-              <button type="submit" className="submit-btn add-btn" disabled={!picked}><Plus size={16} /> Add</button>
-            </form>
-          )
-        ) : <p className="calendar-hint">🔒 View only — log in as admin to add workouts</p>}
+            </>
+          )}
+        </form>
+      )}
 
-        {dayEntries.length > 0 && (
+      {picked?.mode === 'reps' ? (
+        <form className="sets-form" onSubmit={submitEntry}>
+          <div className="sets-head">
+            <label className="field-label" htmlFor="set-count">Sets</label>
+            <input id="set-count" className="input-field sets-count" type="number" min="1" max="20" step="1" inputMode="numeric"
+              value={setCount} onChange={e => setSetCount(e.target.value)} />
+            <label className="check">
+              <input type="checkbox" checked={sameWeight} onChange={e => setSameWeight(e.target.checked)} />
+              <span>Same weight for all sets</span>
+            </label>
+          </div>
+          {sameWeight ? (
+            <div className="set-row">
+              <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required placeholder="Reps per set"
+                value={shared.reps} onChange={e => setShared(sh => ({ ...sh, reps: e.target.value }))} />
+              <input className="input-field" type="number" min="0" step="0.5" inputMode="decimal" placeholder="Weight (kg)"
+                value={shared.weight} onChange={e => setShared(sh => ({ ...sh, weight: e.target.value }))} />
+            </div>
+          ) : Array.from({ length: nSets }, (_, i) => (
+            <div className="set-row" key={i}>
+              <span className="set-no">Set {i + 1}</span>
+              <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required placeholder="Reps"
+                value={rowAt(i).reps} onChange={e => patchRow(i, { reps: e.target.value })} />
+              <input className="input-field" type="number" min="0" step="0.5" inputMode="decimal" placeholder="kg"
+                value={rowAt(i).weight} onChange={e => patchRow(i, { weight: e.target.value })} />
+            </div>
+          ))}
+          <p className="section-note" style={{ margin: 0 }}>Leave weight empty for bodyweight moves.</p>
+          <div className="form-actions">
+            <button type="submit" className="submit-btn">{editingId ? 'Save changes' : 'Add'}</button>
+            <button type="button" className="tab-btn cancel-btn" onClick={closeForm}>{editingId ? 'Cancel' : 'Done'}</button>
+          </div>
+        </form>
+      ) : (
+        <form className="sets-form" onSubmit={submitEntry}>
+          <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required
+            placeholder={picked ? 'Minutes' : 'Pick a workout first'} disabled={!picked} value={amount} onChange={e => setAmount(e.target.value)} />
+          <div className="form-actions">
+            <button type="submit" className="submit-btn" disabled={!picked}>{editingId ? 'Save changes' : 'Add'}</button>
+            <button type="button" className="tab-btn cancel-btn" onClick={closeForm}>{editingId ? 'Cancel' : 'Done'}</button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+
+  return (
+    <>
+      <div className="glass-panel mb-6" id="workout-log">
+        <div className="chart-card-title">Workout log</div>
+        <p className="chart-card-hint">Pick a date to see, add, edit or delete its workouts.</p>
+
+        <DateField value={date} onChange={onDateChange} label="Workout date" />
+
+        {blockedDay && (
+          <p className="day-note blocked"><Ban size={15} /> This day is marked {status === 'rest' ? 'Rest' : 'Leave'}, so workouts can&rsquo;t be added. Change the mark on the calendar first.</p>
+        )}
+
+        {dayEntries.length > 0 ? (
           <ul className="entry-list">
             {dayEntries.map(en => {
               const ex = exercises.find(x => x.id === en.exerciseId);
               if (!ex) return null;
               return (
-                <li key={en.id}>
+                <li key={en.id} className={editingId === en.id ? 'editing' : ''}>
                   <span className="entry-name">{ex.name}{en.sets?.length ? <small className="entry-sub">{describeSets(en.sets)}</small> : null}</span>
                   {!en.sets?.length && <span className="entry-amt">{en.amount} {unitOf(ex)}</span>}
                   <span className="entry-kcal">{Math.round(caloriesFor(ex, en.amount, weight))} kcal</span>
-                  {isAdmin && <button type="button" className="icon-btn" aria-label={`Delete ${ex.name}`} onClick={() => removeEntry(en.id)}><Trash2 size={15} /></button>}
+                  {isAdmin && (
+                    <>
+                      {!blockedDay && <button type="button" className="icon-btn" aria-label={`Edit ${ex.name}`} onClick={() => startEdit(en)}><Pencil size={15} /></button>}
+                      <button type="button" className="icon-btn" aria-label={`Delete ${ex.name}`} onClick={() => removeEntry(en.id)}><Trash2 size={15} /></button>
+                    </>
+                  )}
                 </li>
               );
             })}
-            <li className="entry-total"><span>Day total</span><span>{Math.round(dayKcal)} kcal</span></li>
+            <li className="entry-total"><span>Day total{blockedDay ? ' (not counted)' : ''}</span><span>{Math.round(dayKcal)} kcal</span></li>
           </ul>
+        ) : !blockedDay && (
+          <p className="day-note">{status === 'gym' ? 'Gym day: nothing logged yet.' : 'No workouts logged for this day.'}</p>
         )}
+
+        {isAdmin && !blockedDay && (open ? form : (
+          <button type="button" className="submit-btn log-btn" onClick={() => { resetForm(); onOpenChange(true); }}>
+            <Plus size={16} /> Log workout
+          </button>
+        ))}
+        {!isAdmin && <p className="calendar-hint">🔒 View only — log in as admin to add workouts</p>}
       </div>
 
       <div className="glass-panel mb-6">
@@ -320,19 +380,17 @@ export function WorkoutSection() {
             </ul>
 
             <div className="chart-card-title" style={{ marginTop: '1.25rem' }}>Muscles worked</div>
-            <p className="chart-card-hint">Darker = worked more often</p>
-            <div className="muscle-layout">
-              <BodyMap hits={hits} max={summary.maxHits} />
-              <ul className="muscle-list">
-                {[...summary.byMuscle].sort((a, b) => b.hits - a.hits).map(m => (
-                  <li key={m.id}>
-                    <span className="muscle-name">{m.label}</span>
-                    <span className="muscle-bar"><i style={{ width: `${summary.maxHits ? (m.hits / summary.maxHits) * 100 : 0}%` }} /></span>
-                    <span className="muscle-n">{m.hits}×</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            <p className="chart-card-hint">Hover or tap a muscle. Hotter colour = worked more often.</p>
+            <BodyMap muscles={summary.byMuscle} max={summary.maxHits} />
+            <ul className="muscle-list">
+              {[...summary.byMuscle].sort((a, b) => b.hits - a.hits).map(m => (
+                <li key={m.id}>
+                  <span className="muscle-name">{m.label}</span>
+                  <span className="muscle-bar"><i style={{ width: `${summary.maxHits ? (m.hits / summary.maxHits) * 100 : 0}%` }} /></span>
+                  <span className="muscle-n">{m.hits}×</span>
+                </li>
+              ))}
+            </ul>
           </>
         )}
       </div>

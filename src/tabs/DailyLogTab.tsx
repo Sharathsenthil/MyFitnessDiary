@@ -15,6 +15,9 @@ export function DailyLogTab() {
   const [restDates, setRestDates] = useLocalStorage<string[]>('restDates', []);
   const [userProfile] = useLocalStorage<Pick<UserProfile, 'gymJoinedDate'>>('userProfile', { gymJoinedDate: '2026-01-01' });
   const today = new Date();
+  // The workout log follows the day you mark as Gym, and opens so you can enter what you did
+  const [logDate, setLogDate] = useState(toDateStr(new Date()));
+  const [logOpen, setLogOpen] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
 
   const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
@@ -49,6 +52,10 @@ export function DailyLogTab() {
     const rest = next === 'rest' ? [...without(restDates), dayStr] : without(restDates);
     setGymDates(gym); setLeaveDates(leave); setRestDates(rest);
     save({ gymDates: gym, leaveDates: leave, restDates: rest });
+    if (next === 'gym') {
+      setLogDate(dayStr); setLogOpen(true);
+      setTimeout(() => document.getElementById('workout-log')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
   };
 
   const days: ReactNode[] = [];
@@ -153,7 +160,7 @@ export function DailyLogTab() {
           {isAdmin ? 'Tap a day to cycle its mark. A 4th tap clears it.' : '🔒 View only — log in as admin to edit'}
         </p>
       </div>
-      <WorkoutSection />
+      <WorkoutSection date={logDate} onDateChange={setLogDate} open={logOpen} onOpenChange={setLogOpen} />
     </div>
   );
 }
