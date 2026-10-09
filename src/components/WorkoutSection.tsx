@@ -93,7 +93,7 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
 
   const resetForm = () => {
     setEditingId(null); setQuery(''); setAmount(''); setAdding(false); setDraft(BLANK_DRAFT);
-    setSetCount('3'); setSameWeight(true); setShared(BLANK_ROW); setRows([]);
+    setSetCount('3'); setSameWeight(true); setShared(BLANK_ROW); setRows([]); setPickedId(QUICK_IDS[0]);
   };
   const closeForm = () => { resetForm(); onOpenChange(false); };
 
@@ -136,7 +136,7 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
       setGymDates(gym);
       save({ workoutLogs: next, gymDates: gym });
     } else save({ workoutLogs: next });
-    if (editingId) closeForm(); else { setAmount(''); setShared(sh => ({ ...sh, reps: '' })); setRows([]); }
+    if (editingId) closeForm(); else resetForm(); // back to a clean form, ready for the next workout
   };
 
   const removeEntry = (id: string) => {
