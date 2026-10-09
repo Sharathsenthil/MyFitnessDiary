@@ -1,3 +1,4 @@
+import { fmtDate } from '../lib/dates';
 import {
   ResponsiveContainer, Tooltip as RechartsTooltip, Legend, LineChart, Line,
   XAxis, YAxis, CartesianGrid, AreaChart, Area,
@@ -28,7 +29,7 @@ export function ChartCard({ title, icon, hint, data, series, area = false, unit 
             <XAxis dataKey="label" stroke="var(--text-muted)" tick={{ fontSize: 11 }} minTickGap={24} />
             <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} domain={area ? [0, 'auto'] : ['auto', 'auto']} width={46} />
             <RechartsTooltip
-              labelFormatter={(_l, p) => p?.[0]?.payload?.date ?? ''}
+              labelFormatter={(_l, p) => fmtDate(p?.[0]?.payload?.date ?? '')}
               contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '8px', color: 'var(--text-main)', padding: '6px 10px', fontSize: 12 }}
               labelStyle={{ fontSize: 12, fontWeight: 600, marginBottom: 2 }}
               itemStyle={{ fontSize: 12, padding: '1px 0' }}

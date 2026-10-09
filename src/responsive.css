@@ -318,12 +318,14 @@ button { touch-action: manipulation; }
 
 /* typed date field */
 .date-field { display: flex; gap: 0.5rem; align-items: stretch; }
-.date-field .input-field { flex: 1; }
+.date-box { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 0.15rem; background: var(--panel-bg); border: 1px solid var(--card-border); border-radius: 9px; padding: 0.65rem 0.5rem; transition: border-color 0.25s ease; }
+.date-box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(203,245,92,0.3); }
+.date-seg { display: inline-flex; align-items: center; gap: 0.15rem; }
+.date-sep { color: var(--text-muted); padding: 0 0.15rem; }
+.date-part { width: 2.6ch; min-width: 0; padding: 0.1rem 0; border: none; outline: none; background: transparent; color: var(--text-main); font: inherit; font-size: 1.1rem; font-variant-numeric: tabular-nums; text-align: center; border-radius: 6px; }
+.date-part::placeholder { color: var(--text-muted); opacity: 0.7; }
+.date-part:focus { background: var(--hover-bg); }
 .date-today { border: 1px solid var(--card-border); justify-content: center; padding: 0 1rem; }
-
-/* fill-in date mask: __ / __ / ____ */
-.date-mask { font-variant-numeric: tabular-nums; letter-spacing: 0.08em; font-size: 1.1rem; }
-.date-mask.is-empty { color: var(--text-muted); }
 
 /* ── Short text never wraps onto a second line ── */
 .badge, .tab-btn, .admin-btn, .submit-btn, .score-label, .nav-label, .legend-name, .legend-tap,
@@ -424,3 +426,14 @@ button { touch-action: manipulation; }
 .suggest-new { color: var(--text-main); font-weight: 600; }
 .suggest-empty { padding: 0.7rem 0.75rem; color: var(--text-muted); font-size: 0.9rem; }
 .add-btn:disabled, .add-row .input-field:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.sets-form { display: flex; flex-direction: column; gap: 0.6rem; }
+.sets-head { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+.sets-head .field-label { margin: 0; }
+.input-field.sets-count { width: 4.5rem; flex: 0 0 auto; text-align: center; }
+.check { display: inline-flex; align-items: center; gap: 0.45rem; font-size: 0.9rem; white-space: nowrap; cursor: pointer; }
+.check input { width: 1.1rem; height: 1.1rem; accent-color: var(--success); }
+.set-row { display: flex; align-items: center; gap: 0.6rem; }
+.set-row .input-field { flex: 1; min-width: 0; }
+.set-no { width: 3.6rem; flex: 0 0 auto; font-size: 0.88rem; color: var(--text-muted); white-space: nowrap; }
+.entry-sub { display: block; font-size: 0.8rem; font-weight: 400; color: var(--text-muted); white-space: normal; }

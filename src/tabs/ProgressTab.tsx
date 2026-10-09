@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { TrendingUp, Download, ArrowUp, ArrowDown, Minus } from 'lucide-react';
 import { NUMERIC_KEYS, type NumericKey, type ReportRecord } from '../types';
 import { useLocalStorage } from '../lib/storage';
-import { parseDateStr } from '../lib/dates';
+import { parseDateStr, fmtDate } from '../lib/dates';
 import { cleanRecords, sortRecords, downloadCsv } from '../lib/records';
 import { generateInsights } from '../lib/insights';
 import { fitnessData } from '../data';
@@ -75,7 +75,7 @@ export function ProgressTab() {
 
       <p className="section-note">
         Showing {data.length} report{data.length === 1 ? '' : 's'}
-        {data.length > 0 && <> · {data[0].date} → {data[data.length - 1].date}</>}
+        {data.length > 0 && <> · {fmtDate(data[0].date)} → {fmtDate(data[data.length - 1].date)}</>}
       </p>
 
       {/* Change summary */}

@@ -1,3 +1,4 @@
+import { fmtDate } from '../lib/dates';
 import { useRef, useState } from 'react';
 import { Upload, FileText } from 'lucide-react';
 import { NUMERIC_KEYS, type ReportRecord } from '../types';
@@ -81,7 +82,7 @@ export function ImportPanel({ onFillForm, onImportMany }: {
             <div className="import-result">
               {found.length === 1 ? (
                 <>
-                  <p><strong>Recognised {countMetrics(found[0])} metrics</strong> for <strong>{found[0].date}</strong>
+                  <p><strong>Recognised {countMetrics(found[0])} metrics</strong> for <strong>{fmtDate(found[0].date)}</strong>
                     {found[0].bodyType && <> · {found[0].bodyType}</>}.</p>
                   <p className="section-note">Fills the form below so you can check the values and the date before saving.</p>
                   <button type="button" className="submit-btn" style={{ width: 'auto', padding: '0.5rem 1.25rem' }}
@@ -91,7 +92,7 @@ export function ImportPanel({ onFillForm, onImportMany }: {
                 </>
               ) : (
                 <>
-                  <p><strong>Found {found.length} reports</strong> ({found[0].date} → {found[found.length - 1].date}).</p>
+                  <p><strong>Found {found.length} reports</strong> ({fmtDate(found[0].date)} → {fmtDate(found[found.length - 1].date)}).</p>
                   <p className="section-note">Reports with a date that already exists will be replaced.</p>
                   <button type="button" className="submit-btn" style={{ width: 'auto', padding: '0.5rem 1.25rem' }}
                     onClick={() => { onImportMany(found); reset(); setOpen(false); }}>

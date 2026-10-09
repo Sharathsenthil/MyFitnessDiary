@@ -57,10 +57,17 @@ export interface Exercise {
   builtin?: boolean;
 }
 
-/** One logged workout: minutes for a timed exercise, reps for a counted one. */
+/** One set of a counted exercise. Weight 0 means bodyweight. */
+export interface WorkoutSet {
+  reps: number;
+  weight: number;
+}
+
+/** One logged workout: minutes for a timed exercise, total reps for a counted one (with its sets when known). */
 export interface WorkoutEntry {
   id: string;
   date: string;
   exerciseId: string;
   amount: number;
+  sets?: WorkoutSet[];
 }

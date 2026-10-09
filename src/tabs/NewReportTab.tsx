@@ -90,7 +90,7 @@ export function NewReportTab() {
             {/* Date */}
             <div className="form-section-header">🗓 Report Date</div>
             <div>
-              <label className="field-label">Report date (DD / MM / YYYY)</label>
+              <label className="field-label">Report date (DD / MM / YY)</label>
               <DateField value={form.date} onChange={d => set('date', d)} />
             </div>
 

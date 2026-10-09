@@ -1,4 +1,4 @@
-import type { Exercise, MuscleId, ReportRecord, WorkoutEntry } from '../types';
+import type { Exercise, MuscleId, ReportRecord, WorkoutEntry, WorkoutSet } from '../types';
 import { addDays, parseDateStr, toDateStr } from './dates';
 
 export const MUSCLES: { id: MuscleId; label: string }[] = [
@@ -170,13 +170,15 @@ export function periodRange(period: Period, today = new Date()): [string, string
   return [toDateStr(new Date(today.getFullYear(), today.getMonth(), 1)), toDateStr(new Date(today.getFullYear(), today.getMonth() + 1, 0))];
 }
 
-export interface ExerciseTotal { exercise: Exercise; amount: number; sessions: number; kcal: number }
+export interface ExerciseTotal { exercise: Exercise; amount: number; sessions: number; kcal: number; volume: number; maxWeight: number }
 export interface MuscleTotal { id: MuscleId; label: string; hits: number }
 export interface WorkoutSummary {
   days: number;
   sessions: number;
   minutes: number;
   reps: number;
+  /** Total kg lifted (reps x weight, summed over every set) */
+  volume: number;
   kcal: number;
   byExercise: ExerciseTotal[];
   byMuscle: MuscleTotal[];
@@ -191,7 +193,7 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
   const totals = new Map<string, ExerciseTotal>();
   const hits = new Map<MuscleId, number>();
   const days = new Set<string>();
-  let minutes = 0, repCount = 0, kcal = 0;
+  let minutes = 0, repCount = 0, kcal = 0, volume = 0;
 
   for (const entry of inRange) {
     const ex = byId.get(entry.exerciseId);
@@ -200,8 +202,11 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
     const cal = caloriesFor(ex, entry.amount, weightKg);
     kcal += cal;
     if (ex.mode === 'time') minutes += entry.amount; else repCount += entry.amount;
-    const t = totals.get(ex.id) ?? { exercise: ex, amount: 0, sessions: 0, kcal: 0 };
+    const t = totals.get(ex.id) ?? { exercise: ex, amount: 0, sessions: 0, kcal: 0, volume: 0, maxWeight: 0 };
     t.amount += entry.amount; t.sessions++; t.kcal += cal;
+    const vol = setVolume(entry.sets);
+    t.volume += vol; volume += vol;
+    t.maxWeight = Math.max(t.maxWeight, ...(entry.sets ?? []).map(x => x.weight));
     totals.set(ex.id, t);
     for (const m of ex.muscles) hits.set(m, (hits.get(m) ?? 0) + 1);
   }
@@ -210,11 +215,22 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], period
   return {
     days: days.size,
     sessions: [...totals.values()].reduce((s, t) => s + t.sessions, 0),
-    minutes, reps: repCount, kcal,
+    minutes, reps: repCount, volume, kcal,
     byExercise: [...totals.values()].sort((a, b) => b.kcal - a.kcal),
     byMuscle,
     maxHits: Math.max(0, ...byMuscle.map(m => m.hits)),
   };
+}
+
+export const setVolume = (sets?: WorkoutSet[]) => (sets ?? []).reduce((v, x) => v + x.reps * x.weight, 0);
+
+const kg = (w: number) => (w > 0 ? `${+w.toFixed(2)} kg` : 'bodyweight');
+
+/** "3 × 10 @ 40 kg" when every set matches, otherwise each set: "10×40, 8×45 kg". */
+export function describeSets(sets: WorkoutSet[]): string {
+  const first = sets[0];
+  if (sets.every(x => x.reps === first.reps && x.weight === first.weight)) return `${sets.length} × ${first.reps} @ ${kg(first.weight)}`;
+  return sets.map(x => `${x.reps}×${x.weight > 0 ? +x.weight.toFixed(2) : 'BW'}`).join(', ') + (sets.some(x => x.weight > 0) ? ' kg' : '');
 }
 
 export const entriesOn = (entries: WorkoutEntry[], date: string) => entries.filter(e => e.date === date);

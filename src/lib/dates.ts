@@ -11,3 +11,9 @@ export const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMo
 
 export const daysBetween = (a: Date, b: Date) =>
   Math.round((b.getTime() - a.getTime()) / 86400000);
+
+/** Shown to people as DD/MM/YY (stored dates stay YYYY-MM-DD). */
+export const fmtDate = (iso: string) => {
+  const [y, m, d] = iso.split('-');
+  return y && m && d ? `${d}/${m}/${y.slice(2)}` : iso;
+};

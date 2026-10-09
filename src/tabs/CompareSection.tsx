@@ -1,3 +1,4 @@
+import { fmtDate } from '../lib/dates';
 import { useState } from 'react';
 import { GitCompare } from 'lucide-react';
 import type { NumericKey, ReportRecord } from '../types';
@@ -49,11 +50,11 @@ export function CompareSection({ records }: { records: ReportRecord[] }) {
 
       <div className="compare-selects">
         <select className="input-field" value={date1} onChange={e => setDate1(e.target.value)}>
-          {sorted.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
+          {sorted.map(d => <option key={d.date} value={d.date}>{fmtDate(d.date)}</option>)}
         </select>
         <div className="compare-vs">VS</div>
         <select className="input-field" value={date2} onChange={e => setDate2(e.target.value)}>
-          {sorted.map(d => <option key={d.date} value={d.date}>{d.date}</option>)}
+          {sorted.map(d => <option key={d.date} value={d.date}>{fmtDate(d.date)}</option>)}
         </select>
       </div>
 

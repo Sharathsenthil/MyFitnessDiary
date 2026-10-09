@@ -7,7 +7,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, L
 import { fitnessData } from '../data';
 import type { ReportRecord, UserProfile } from '../types';
 import { useLocalStorage } from '../lib/storage';
-import { toDateStr, parseDateStr } from '../lib/dates';
+import { toDateStr, parseDateStr, fmtDate } from '../lib/dates';
 import { useAuth } from '../lib/auth';
 import { Section } from '../components/Section';
 import { MetricRow } from '../components/MetricRow';
@@ -153,7 +153,7 @@ export function ReportTab() {
               <div className="hero-sub">
                 <span className="hero-chip">🎂 {Math.floor((new Date().getTime() - parseDateStr(userProfile.dob).getTime()) / 31557600000)} yrs</span>
                 <span className="hero-chip">📏 {userProfile.height} cm</span>
-                <span className="hero-chip">🏋️ Joined {userProfile.gymJoinedDate}</span>
+                <span className="hero-chip">🏋️ Joined {fmtDate(userProfile.gymJoinedDate)}</span>
               </div>
             </div>
           )}

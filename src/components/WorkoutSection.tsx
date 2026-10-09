@@ -1,10 +1,10 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Plus, Trash2, Flame, Timer, Repeat, Activity } from 'lucide-react';
-import type { Exercise, MuscleId, ReportRecord, WorkoutEntry } from '../types';
+import type { Exercise, MuscleId, ReportRecord, WorkoutEntry, WorkoutSet } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { useAuth } from '../lib/auth';
 import { toDateStr } from '../lib/dates';
-import { MUSCLES, QUICK_IDS, caloriesFor, entriesOn, latestWeight, mergeExercises, normName, searchExercises, summarize, type Period } from '../lib/workouts';
+import { MUSCLES, QUICK_IDS, caloriesFor, describeSets, entriesOn, latestWeight, mergeExercises, normName, searchExercises, summarize, type Period } from '../lib/workouts';
 import { DateField } from './DateField';
 import { BodyMap } from './BodyMap';
 
@@ -35,6 +35,15 @@ export function WorkoutSection() {
   const [pickedId, setPickedId] = useState<string | null>(QUICK_IDS[0]);
   const [query, setQuery] = useState('');
   const [amount, setAmount] = useState('');
+  // Counted workouts: sets of reps at a weight, the same for every set or set by set
+  const [setCount, setSetCount] = useState('3');
+  const [sameWeight, setSameWeight] = useState(true);
+  const [shared, setShared] = useState({ reps: '', weight: '' });
+  const [rows, setRows] = useState<{ reps: string; weight: string }[]>([]);
+  const nSets = Math.min(20, Math.max(1, Math.floor(Number(setCount)) || 1));
+  const rowAt = (i: number) => rows[i] ?? { reps: '', weight: '' };
+  const patchRow = (i: number, patch: Partial<{ reps: string; weight: string }>) =>
+    setRows(r => Array.from({ length: Math.max(r.length, i + 1) }, (_, k) => (k === i ? { ...(r[k] ?? { reps: '', weight: '' }), ...patch } : r[k] ?? { reps: '', weight: '' })));
   const [period, setPeriod] = useState<Period>('week');
   const [adding, setAdding] = useState(false);
   const [draft, setDraft] = useState({ name: '', mode: 'time' as Exercise['mode'], muscles: [] as MuscleId[], intensity: '' });
@@ -60,9 +69,21 @@ export function WorkoutSection() {
 
   const addEntry = (e: FormEvent) => {
     e.preventDefault();
-    const n = Number(amount);
-    if (!isAdmin || !picked || !(n > 0)) return;
-    const next = [...rawLogs, { id: `${Date.now()}`, date, exerciseId: picked.id, amount: n }];
+    if (!isAdmin || !picked) return;
+    let entry: WorkoutEntry;
+    if (picked.mode === 'time') {
+      const n = Number(amount);
+      if (!(n > 0)) return;
+      entry = { id: `${Date.now()}`, date, exerciseId: picked.id, amount: n };
+    } else {
+      const sets: WorkoutSet[] = Array.from({ length: nSets }, (_, i) => {
+        const r = sameWeight ? shared : rowAt(i);
+        return { reps: Math.floor(Number(r.reps)), weight: Math.max(0, Number(r.weight) || 0) };
+      });
+      if (sets.some(x => !(x.reps > 0))) return;
+      entry = { id: `${Date.now()}`, date, exerciseId: picked.id, amount: sets.reduce((t, x) => t + x.reps, 0), sets };
+    }
+    const next = [...rawLogs, entry];
     // A logged workout means you went to the gym that day
     const gym = gymDates.includes(date) ? gymDates : [...gymDates, date];
     const leave = leaveDates.filter(d => d !== date);
@@ -70,6 +91,7 @@ export function WorkoutSection() {
     setLogs(next); setGymDates(gym); setLeaveDates(leave); setRestDates(rest);
     save({ workoutLogs: next, gymDates: gym, leaveDates: leave, restDates: rest });
     setAmount('');
+    setShared(sh => ({ ...sh, reps: '' })); setRows([]);
   };
 
   const removeEntry = (id: string) => {
@@ -108,7 +130,7 @@ export function WorkoutSection() {
   const stats = [
     { icon: <Activity size={18} color="#3b82f6" />, label: 'Sessions', value: summary.sessions, unit: '' },
     { icon: <Timer size={18} color="var(--success)" />, label: 'Time', value: fmtMin(summary.minutes), unit: '' },
-    { icon: <Repeat size={18} color="var(--accent)" />, label: 'Reps', value: summary.reps, unit: '' },
+    { icon: <Repeat size={18} color="var(--accent)" />, label: 'Reps', value: summary.reps, unit: summary.volume > 0 ? `· ${Math.round(summary.volume)} kg` : '' },
     { icon: <Flame size={18} color="var(--warning)" />, label: 'Calories', value: Math.round(summary.kcal), unit: 'kcal' },
   ];
 
@@ -207,11 +229,43 @@ export function WorkoutSection() {
         )}
 
         {isAdmin ? (
-          <form className="add-row" onSubmit={addEntry}>
-            <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required
-              placeholder={!picked ? 'Pick a workout first' : picked.mode === 'time' ? 'Minutes' : 'Reps'} disabled={!picked} value={amount} onChange={e => setAmount(e.target.value)} />
-            <button type="submit" className="submit-btn add-btn" disabled={!picked}><Plus size={16} /> Add</button>
-          </form>
+          picked?.mode === 'reps' ? (
+            <form className="sets-form" onSubmit={addEntry}>
+              <div className="sets-head">
+                <label className="field-label" htmlFor="set-count">Sets</label>
+                <input id="set-count" className="input-field sets-count" type="number" min="1" max="20" step="1" inputMode="numeric"
+                  value={setCount} onChange={e => setSetCount(e.target.value)} />
+                <label className="check">
+                  <input type="checkbox" checked={sameWeight} onChange={e => setSameWeight(e.target.checked)} />
+                  <span>Same weight for all sets</span>
+                </label>
+              </div>
+              {sameWeight ? (
+                <div className="set-row">
+                  <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required placeholder="Reps per set"
+                    value={shared.reps} onChange={e => setShared(sh => ({ ...sh, reps: e.target.value }))} />
+                  <input className="input-field" type="number" min="0" step="0.5" inputMode="decimal" placeholder="Weight (kg)"
+                    value={shared.weight} onChange={e => setShared(sh => ({ ...sh, weight: e.target.value }))} />
+                </div>
+              ) : Array.from({ length: nSets }, (_, i) => (
+                <div className="set-row" key={i}>
+                  <span className="set-no">Set {i + 1}</span>
+                  <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required placeholder="Reps"
+                    value={rowAt(i).reps} onChange={e => patchRow(i, { reps: e.target.value })} />
+                  <input className="input-field" type="number" min="0" step="0.5" inputMode="decimal" placeholder="kg"
+                    value={rowAt(i).weight} onChange={e => patchRow(i, { weight: e.target.value })} />
+                </div>
+              ))}
+              <p className="section-note" style={{ margin: 0 }}>Leave weight empty for bodyweight moves.</p>
+              <button type="submit" className="submit-btn"><Plus size={16} style={{ verticalAlign: '-3px' }} /> Add</button>
+            </form>
+          ) : (
+            <form className="add-row" onSubmit={addEntry}>
+              <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required
+                placeholder={picked ? 'Minutes' : 'Pick a workout first'} disabled={!picked} value={amount} onChange={e => setAmount(e.target.value)} />
+              <button type="submit" className="submit-btn add-btn" disabled={!picked}><Plus size={16} /> Add</button>
+            </form>
+          )
         ) : <p className="calendar-hint">🔒 View only — log in as admin to add workouts</p>}
 
         {dayEntries.length > 0 && (
@@ -221,8 +275,8 @@ export function WorkoutSection() {
               if (!ex) return null;
               return (
                 <li key={en.id}>
-                  <span className="entry-name">{ex.name}</span>
-                  <span className="entry-amt">{en.amount} {unitOf(ex)}</span>
+                  <span className="entry-name">{ex.name}{en.sets?.length ? <small className="entry-sub">{describeSets(en.sets)}</small> : null}</span>
+                  {!en.sets?.length && <span className="entry-amt">{en.amount} {unitOf(ex)}</span>}
                   <span className="entry-kcal">{Math.round(caloriesFor(ex, en.amount, weight))} kcal</span>
                   {isAdmin && <button type="button" className="icon-btn" aria-label={`Delete ${ex.name}`} onClick={() => removeEntry(en.id)}><Trash2 size={15} /></button>}
                 </li>
@@ -259,7 +313,7 @@ export function WorkoutSection() {
               {summary.byExercise.map(t => (
                 <li key={t.exercise.id}>
                   <span className="entry-name">{t.exercise.name}</span>
-                  <span className="entry-amt">{t.exercise.mode === 'time' ? fmtMin(t.amount) : `${t.amount} reps`}</span>
+                  <span className="entry-amt">{t.exercise.mode === 'time' ? fmtMin(t.amount) : `${t.amount} reps${t.volume > 0 ? ` · ${Math.round(t.volume)} kg` : ''}`}</span>
                   <span className="entry-kcal">{Math.round(t.kcal)} kcal</span>
                 </li>
               ))}

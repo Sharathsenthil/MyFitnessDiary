@@ -2,7 +2,7 @@ import { useState, type ReactNode } from 'react';
 import { Dumbbell, X, Moon } from 'lucide-react';
 import type { DayStatus, UserProfile } from '../types';
 import { useLocalStorage } from '../lib/storage';
-import { parseDateStr, toDateStr } from '../lib/dates';
+import { fmtDate, parseDateStr, toDateStr } from '../lib/dates';
 import { useAuth } from '../lib/auth';
 import { computeStreaks } from '../lib/streaks';
 import { StreakPanel } from '../components/StreakPanel';
@@ -114,7 +114,7 @@ export function DailyLogTab() {
           </div>
           
           <div className="attendance-alltime" style={{ flex: 1, minWidth: 200 }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>All Time (Since {userProfile.gymJoinedDate})</div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>All Time (Since {fmtDate(userProfile.gymJoinedDate)})</div>
             <div>
               <span className="gradient-text" style={{ fontSize: '2.5rem', fontWeight: 700 }}>{totalDaysAttended}</span>
               <span style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}> / {totalDaysSinceJoined} days</span>
