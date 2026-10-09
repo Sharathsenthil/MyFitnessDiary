@@ -404,23 +404,23 @@ button { touch-action: manipulation; }
 .entry-total { justify-content: space-between; font-weight: 700; }
 .icon-btn { background: none; border: none; color: var(--text-muted); padding: 0.35rem; cursor: pointer; display: inline-flex; }
 /* hologram */
-.holo { background: radial-gradient(ellipse at 50% 30%, #0b2a3a 0%, #06111c 70%); border: 1px solid rgba(34,211,238,0.35); border-radius: 16px; padding: 0.9rem 0.6rem 0.8rem; box-shadow: inset 0 0 40px rgba(34,211,238,0.08), 0 0 24px rgba(34,211,238,0.08); margin-bottom: 1rem; }
+.holo { background: radial-gradient(ellipse at 50% 30%, #0e2347 0%, #060d1b 72%); border: 1px solid rgba(96,165,250,0.35); border-radius: 16px; padding: 0.9rem 0.6rem 0.8rem; box-shadow: inset 0 0 40px rgba(59,130,246,0.1), 0 0 24px rgba(59,130,246,0.1); margin-bottom: 1rem; }
 .body-map { display: flex; justify-content: center; gap: 0.5rem; }
-.body-fig { margin: 0; flex: 1 1 0; max-width: 190px; text-align: center; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: #67e8f9; }
+.body-fig { margin: 0; flex: 1 1 0; max-width: 190px; text-align: center; font-size: 0.72rem; letter-spacing: 0.14em; text-transform: uppercase; color: #93c5fd; }
 .body-fig svg { width: 100%; height: auto; display: block; overflow: visible; }
-.holo-body { stroke: #22d3ee; stroke-width: 1; stroke-opacity: 0.75; }
-.holo-ring { fill: none; stroke: #22d3ee; stroke-width: 1; stroke-opacity: 0.6; }
+.holo-body { stroke: #8ecbff; stroke-width: 1.1; stroke-opacity: 0.9; }
+.holo-ring { fill: none; stroke: #60a5fa; stroke-width: 1; stroke-opacity: 0.6; }
 .holo-ring.faint { stroke-opacity: 0.3; }
-.holo-muscle { color: #22d3ee; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.holo-muscle * { fill: rgba(34,211,238,0.08); stroke: #22d3ee; stroke-opacity: 0.45; stroke-width: 0.8; transition: fill 0.2s, stroke 0.2s; }
-.holo-muscle.worked * { fill: currentColor; fill-opacity: 0.55; stroke: currentColor; stroke-opacity: 0.95; }
-.holo-muscle.active * { fill-opacity: 0.85; stroke: #fff; stroke-opacity: 1; stroke-width: 1.4; }
-.holo-readout { display: flex; flex-direction: column; gap: 0.15rem; min-height: 4.4rem; margin: 0.6rem 0.4rem 0; padding: 0.6rem 0.8rem; border: 1px solid rgba(34,211,238,0.3); border-radius: 10px; background: rgba(34,211,238,0.06); color: #cffafe; font-size: 0.88rem; }
+.holo-muscle { color: #3b82f6; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.holo-muscle * { fill: rgba(96,165,250,0.04); stroke: #93c5fd; stroke-opacity: 0.3; stroke-width: 0.7; transition: fill 0.2s, stroke 0.2s; }
+.holo-muscle.worked * { fill: currentColor; fill-opacity: 0.5; stroke: currentColor; stroke-opacity: 0.95; }
+.holo-muscle.active * { fill-opacity: 0.8; stroke: #fff; stroke-opacity: 1; stroke-width: 1.3; }
+.holo-readout { display: flex; flex-direction: column; gap: 0.15rem; min-height: 4.4rem; margin: 0.6rem 0.4rem 0; padding: 0.6rem 0.8rem; border: 1px solid rgba(96,165,250,0.3); border-radius: 10px; background: rgba(59,130,246,0.08); color: #dbeafe; font-size: 0.88rem; }
 .holo-readout strong { color: #fff; font-size: 1rem; }
-.holo-sources { color: #67e8f9; font-size: 0.8rem; }
-.holo-hint { color: #67e8f9; opacity: 0.8; margin: auto 0; text-align: center; }
-.holo-scale { display: flex; align-items: center; gap: 0.5rem; margin: 0.6rem 0.4rem 0; font-size: 0.72rem; color: #67e8f9; }
-.holo-scale i { flex: 1; height: 5px; border-radius: 3px; background: linear-gradient(90deg, hsl(185 100% 58%), hsl(95 100% 55%), hsl(10 100% 52%)); }
+.holo-sources { color: #93c5fd; font-size: 0.8rem; }
+.holo-hint { color: #93c5fd; opacity: 0.8; margin: auto 0; text-align: center; }
+.holo-scale { display: flex; align-items: center; gap: 0.5rem; margin: 0.6rem 0.4rem 0; font-size: 0.72rem; color: #93c5fd; }
+.holo-scale i { flex: 1; height: 5px; border-radius: 3px; background: linear-gradient(90deg, hsl(205 100% 62%), hsl(102 100% 58%), hsl(0 100% 54%)); }
 @media (prefers-reduced-motion: reduce) { .holo-scan { display: none; } }
 .muscle-list { list-style: none; margin: 0; padding: 0; }
 .muscle-list li { display: flex; align-items: center; gap: 0.6rem; padding: 0.25rem 0; font-size: 0.88rem; }
@@ -457,3 +457,4 @@ button { touch-action: manipulation; }
 .form-actions .submit-btn { flex: 1; }
 .cancel-btn { border: 1px solid var(--card-border); justify-content: center; }
 .entry-list li.editing { background: var(--hover-bg); border-radius: 8px; }
+.gender-seg { margin: 0; }

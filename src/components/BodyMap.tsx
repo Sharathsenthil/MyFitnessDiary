@@ -1,65 +1,99 @@
 import { useId, useState, type ReactNode } from 'react';
-import type { MuscleId } from '../types';
+import type { Gender, MuscleId } from '../types';
 import type { MuscleTotal } from '../lib/workouts';
 
 /*
- * Holographic body: front and back figure drawn as the right half and mirrored for the left.
- * Each muscle is shaded cyan (light) to red (heavy) by how often it was worked; hover or tap one
- * to read how much it was worked.
+ * Holographic body, front and back, male or female. The outline is one smooth contour built from the
+ * right half and mirrored; fine scan lines, a glowing rim and a moving scan band give the hologram look.
+ * Muscles are shaded light (blue) to heavy (red) by how often they were worked; hover or tap one to read it.
  */
 
-const W = 200, H = 412;
+const W = 200, H = 420;
 
-// Silhouette pieces (right half)
-const BODY: string[] = [
-  'M100 62 C118 63 140 68 150 84 L148 118 C146 150 140 172 134 196 L132 214 L100 214 Z', // torso
-  'M92 46 L92 62 L108 62 L108 46 Z', // neck
-  'M146 80 C158 80 166 92 166 112 L162 150 L148 150 L142 108 Z', // upper arm
-  'M162 150 L168 196 L172 226 L160 228 L152 196 L150 150 Z', // forearm
-  'M162 226 C170 226 176 236 172 246 C166 252 158 244 160 228 Z', // hand
-  'M101 214 L136 214 C140 246 136 280 126 306 C124 330 124 350 126 372 L132 396 C126 402 112 402 110 396 L108 372 C106 350 104 330 103 306 C100 280 100 246 101 214 Z', // leg
-];
+type Seg = [number, number, number, number, number, number]; // c1, c2, end
+type Half = { start: [number, number]; segs: Seg[] };
+
+// Right half of the outline, from the top of the head down to the crotch (x = 100 is the centre line)
+const MALE: Half = {
+  start: [100, 4],
+  segs: [
+    [113, 4, 121, 17, 121, 30], [121, 40, 117, 50, 111, 52], [110, 55, 108, 57, 108, 60], [108, 62, 108, 65, 109, 68],
+    [122, 70, 134, 73, 142, 80], [150, 80, 156, 90, 156, 100], [158, 112, 163, 128, 166, 140], [169, 155, 176, 176, 180, 192],
+    [182, 198, 186, 206, 186, 214], [187, 222, 185, 230, 180, 232], [174, 232, 170, 216, 171, 198], [162, 182, 158, 160, 156, 142],
+    [153, 128, 144, 112, 136, 102], [134, 116, 136, 134, 134, 150], [132, 160, 130, 175, 131, 186], [133, 196, 140, 204, 138, 214],
+    [139, 244, 136, 268, 134, 290], [136, 308, 133, 318, 131, 332], [130, 354, 126, 376, 124, 392], [126, 402, 132, 408, 136, 411],
+    [130, 414, 120, 414, 116, 411], [114, 404, 112, 400, 112, 394], [112, 370, 106, 330, 108, 300], [110, 268, 102, 248, 100, 226],
+  ],
+};
+
+const FEMALE: Half = {
+  start: [100, 6],
+  segs: [
+    [112, 6, 119, 18, 119, 31], [119, 41, 115, 50, 110, 53], [109, 56, 107, 58, 107, 61], [107, 63, 107, 66, 108, 69],
+    [118, 71, 128, 74, 136, 81], [142, 82, 146, 90, 146, 100], [148, 112, 152, 126, 155, 140], [157, 154, 164, 172, 168, 190],
+    [171, 196, 173, 203, 173, 210], [174, 218, 172, 226, 168, 228], [162, 228, 159, 212, 160, 198], [152, 178, 148, 160, 146, 142],
+    [143, 126, 136, 112, 129, 104], [127, 112, 132, 118, 131, 128], [130, 142, 125, 160, 124, 172], [123, 188, 140, 198, 147, 214],
+    [150, 238, 140, 266, 134, 290], [136, 306, 133, 318, 131, 332], [130, 354, 126, 376, 124, 392], [126, 402, 132, 408, 136, 411],
+    [130, 414, 120, 414, 116, 411], [114, 404, 112, 400, 112, 394], [112, 370, 106, 330, 108, 300], [110, 268, 102, 248, 100, 228],
+  ],
+};
+
+/** Closed outline: the right half forward, then its mirror image back up to the start. */
+function outline({ start, segs }: Half): string {
+  const m = (x: number) => W - x;
+  let d = `M${start[0]} ${start[1]}`;
+  for (const [a, b, c, e, x, y] of segs) d += ` C${a} ${b} ${c} ${e} ${x} ${y}`;
+  const pts = [start, ...segs.map(s => [s[4], s[5]] as [number, number])];
+  for (let i = segs.length - 1; i >= 0; i--) {
+    const [a, b, c, e] = segs[i];
+    d += ` C${m(c)} ${e} ${m(a)} ${b} ${m(pts[i][0])} ${pts[i][1]}`;
+  }
+  return d + ' Z';
+}
+
+const OUTLINES: Record<Gender, string> = { male: outline(MALE), female: outline(FEMALE) };
 
 type Shape = { m: MuscleId; node: ReactNode };
-
 const ell = (cx: number, cy: number, rx: number, ry: number, rot = 0): ReactNode =>
   <ellipse cx={cx} cy={cy} rx={rx} ry={ry} transform={rot ? `rotate(${rot} ${cx} ${cy})` : undefined} />;
 const path = (d: string): ReactNode => <path d={d} />;
-const absBlocks: ReactNode = <>
-  {[124, 146, 168].map(y => <rect key={y} x="103" y={y} width="15" height="18" rx="5" />)}
-</>;
+const absBlocks: ReactNode = <>{[128, 150, 172].map(y => <rect key={y} x="103" y={y} width="15" height="19" rx="6" />)}</>;
 
+// Right-half muscle shapes, mirrored for the left. They are clipped to the body, so they never spill out.
 const FRONT: Shape[] = [
-  { m: 'shoulders', node: ell(152, 94, 11, 16, 12) },
-  { m: 'chest', node: path('M101 80 C118 76 138 80 146 94 C146 108 132 120 101 118 Z') },
-  { m: 'biceps', node: ell(154, 124, 9, 22, 6) },
-  { m: 'forearms', node: ell(161, 190, 8, 28, 6) },
+  { m: 'shoulders', node: ell(146, 94, 13, 17, 15) },
+  { m: 'chest', node: path('M101 82 C116 78 134 82 142 98 C140 112 124 122 101 120 Z') },
+  { m: 'biceps', node: ell(156, 122, 9, 21, -14) },
+  { m: 'forearms', node: ell(169, 168, 8, 27, -16) },
   { m: 'abs', node: absBlocks },
-  { m: 'quads', node: path('M103 222 C102 250 104 276 110 300 L126 300 C132 280 134 250 133 222 Z') },
-  { m: 'calves', node: path('M108 318 C106 340 108 362 112 380 L124 380 C126 360 126 338 124 318 Z') },
+  { m: 'quads', node: path('M103 230 C104 258 108 284 114 300 L132 298 C137 276 138 250 136 224 Z') },
+  { m: 'calves', node: path('M114 320 C112 346 115 372 119 388 L126 386 C130 366 131 342 129 322 Z') },
 ];
 
 const BACK: Shape[] = [
-  { m: 'shoulders', node: ell(152, 94, 11, 16, 12) },
-  { m: 'back', node: path('M101 64 C120 66 140 72 148 88 C146 120 136 150 122 172 L101 190 Z') },
-  { m: 'triceps', node: ell(154, 124, 9, 22, 6) },
-  { m: 'forearms', node: ell(161, 190, 8, 28, 6) },
-  { m: 'glutes', node: path('M101 196 C120 190 138 198 136 224 C128 238 110 238 101 226 Z') },
-  { m: 'hamstrings', node: path('M103 240 C102 264 104 286 110 304 L126 304 C132 284 134 262 133 240 Z') },
-  { m: 'calves', node: path('M108 316 C102 336 106 362 112 382 L124 382 C130 362 130 336 124 316 Z') },
+  { m: 'shoulders', node: ell(146, 94, 13, 17, 15) },
+  { m: 'back', node: path('M101 70 C120 72 138 80 142 98 C140 128 130 156 118 176 L101 186 Z') },
+  { m: 'triceps', node: ell(156, 122, 9, 21, -14) },
+  { m: 'forearms', node: ell(169, 168, 8, 27, -16) },
+  { m: 'glutes', node: path('M101 192 C122 186 142 194 140 214 C132 230 112 232 101 226 Z') },
+  { m: 'hamstrings', node: path('M103 238 C104 262 108 284 114 302 L132 300 C137 278 138 256 136 234 Z') },
+  { m: 'calves', node: path('M112 318 C108 342 113 370 119 390 L127 388 C132 366 132 340 129 320 Z') },
 ];
 
-const heat = (t: number) => `hsl(${Math.round(185 - 175 * t)} 100% ${Math.round(58 - 6 * t)}%)`;
+// Light = blue, heavy = red
+const heat = (t: number) => `hsl(${Math.round(205 - 205 * t)} 100% ${Math.round(62 - 8 * t)}%)`;
 
-function Figure({ title, shapes, byId, max, active, onHover, onPick }: {
-  title: string; shapes: Shape[]; byId: Map<MuscleId, MuscleTotal>; max: number;
+function Figure({ title, gender, shapes, byId, max, active, onHover, onPick }: {
+  title: string; gender: Gender; shapes: Shape[]; byId: Map<MuscleId, MuscleTotal>; max: number;
   active: MuscleId | null; onHover: (m: MuscleId | null) => void; onPick: (m: MuscleId) => void;
 }) {
   const uid = useId().replace(/:/g, '');
   const mirror = `translate(${W} 0) scale(-1 1)`;
+  // Female proportions are a little narrower at the shoulders
+  const fit = gender === 'female' ? `translate(100 0) scale(0.93 1) translate(-100 0)` : undefined;
+
   const half = (side: 'r' | 'l') => (
     <g transform={side === 'l' ? mirror : undefined}>
-      {BODY.map((d, i) => <path key={i} d={d} className="holo-body" fill={`url(#mesh-${uid})`} />)}
       {shapes.map((s, i) => {
         const n = byId.get(s.m)?.hits ?? 0;
         const t = max > 0 ? n / max : 0;
@@ -78,36 +112,37 @@ function Figure({ title, shapes, byId, max, active, onHover, onPick }: {
 
   return (
     <figure className="body-fig">
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${title} view of the body, shaded by how often each muscle was worked`}>
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${title} view of the ${gender} body, shaded by how often each muscle was worked`}>
         <defs>
-          <filter id={`glow-${uid}`} x="-20%" y="-10%" width="140%" height="120%">
-            <feGaussianBlur stdDeviation="2.4" result="b" />
+          <clipPath id={`clip-${uid}`}><path d={OUTLINES[gender]} /></clipPath>
+          <filter id={`glow-${uid}`} x="-25%" y="-10%" width="150%" height="120%">
+            <feGaussianBlur stdDeviation="3" result="b" />
             <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
           </filter>
-          <pattern id={`mesh-${uid}`} width="4" height="4" patternUnits="userSpaceOnUse">
-            <rect width="4" height="4" fill="rgba(34,211,238,0.07)" />
-            <rect width="4" height="0.7" fill="rgba(34,211,238,0.28)" />
+          <pattern id={`lines-${uid}`} width="4" height="2.6" patternUnits="userSpaceOnUse">
+            <rect width="4" height="2.6" fill="rgba(56,140,255,0.16)" />
+            <rect width="4" height="0.8" fill="rgba(120,190,255,0.55)" />
           </pattern>
           <linearGradient id={`beam-${uid}`} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#22d3ee" stopOpacity="0" />
-            <stop offset="0.5" stopColor="#67e8f9" stopOpacity="0.35" />
-            <stop offset="1" stopColor="#22d3ee" stopOpacity="0" />
+            <stop offset="0" stopColor="#60a5fa" stopOpacity="0" />
+            <stop offset="0.5" stopColor="#bfdbfe" stopOpacity="0.4" />
+            <stop offset="1" stopColor="#60a5fa" stopOpacity="0" />
           </linearGradient>
         </defs>
 
         <g filter={`url(#glow-${uid})`}>
-          <ellipse cx="100" cy="28" rx="16" ry="20" className="holo-body" fill={`url(#mesh-${uid})`} />
-          {half('r')}
-          {half('l')}
+          <path d={OUTLINES[gender]} className="holo-body" fill={`url(#lines-${uid})`} />
+        </g>
+        <g clipPath={`url(#clip-${uid})`}>
+          <g transform={fit}>{half('r')}{half('l')}</g>
+          <rect className="holo-scan" x="0" y="-50" width={W} height="50" fill={`url(#beam-${uid})`}>
+            <animate attributeName="y" values={`-50;${H}`} dur="4.5s" repeatCount="indefinite" />
+          </rect>
         </g>
 
         {/* projector rings under the feet */}
-        <ellipse cx="100" cy="402" rx="62" ry="7" className="holo-ring" />
-        <ellipse cx="100" cy="402" rx="44" ry="4.5" className="holo-ring faint" />
-
-        <rect className="holo-scan" x="0" y="-40" width={W} height="40" fill={`url(#beam-${uid})`}>
-          <animate attributeName="y" values={`-40;${H}`} dur="4.5s" repeatCount="indefinite" />
-        </rect>
+        <ellipse cx="100" cy="414" rx="64" ry="6" className="holo-ring" />
+        <ellipse cx="100" cy="414" rx="44" ry="4" className="holo-ring faint" />
       </svg>
       <figcaption>{title}</figcaption>
     </figure>
@@ -117,7 +152,7 @@ function Figure({ title, shapes, byId, max, active, onHover, onPick }: {
 const intensity = (t: number) => (t < 0.34 ? 'Light' : t < 0.67 ? 'Moderate' : 'Heavy');
 
 /** Front and back hologram plus a readout for the muscle you hover or tap. */
-export function BodyMap({ muscles, max }: { muscles: MuscleTotal[]; max: number }) {
+export function BodyMap({ muscles, max, gender }: { muscles: MuscleTotal[]; max: number; gender: Gender }) {
   const [hover, setHover] = useState<MuscleId | null>(null);
   const [selected, setSelected] = useState<MuscleId | null>(null);
   const byId = new Map(muscles.map(m => [m.id, m]));
@@ -128,8 +163,8 @@ export function BodyMap({ muscles, max }: { muscles: MuscleTotal[]; max: number 
   return (
     <div className="holo">
       <div className="body-map">
-        <Figure title="Front" shapes={FRONT} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
-        <Figure title="Back" shapes={BACK} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
+        <Figure title="Front" gender={gender} shapes={FRONT} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
+        <Figure title="Back" gender={gender} shapes={BACK} byId={byId} max={max} active={active} onHover={setHover} onPick={pick} />
       </div>
 
       <div className="holo-readout" aria-live="polite">

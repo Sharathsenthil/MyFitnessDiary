@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { Plus, Trash2, Pencil, Flame, Timer, Repeat, Activity, Ban } from 'lucide-react';
-import type { Exercise, MuscleId, ReportRecord, WorkoutEntry, WorkoutSet } from '../types';
+import type { Exercise, MuscleId, ReportRecord, UserProfile, WorkoutEntry, WorkoutSet } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { useAuth } from '../lib/auth';
 import { MUSCLES, QUICK_IDS, caloriesFor, describeSets, entriesOn, latestWeight, mergeExercises, normName, searchExercises, summarize, type Period } from '../lib/workouts';
@@ -29,6 +29,7 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
   const [rawLogs, setLogs] = useLocalStorage<WorkoutEntry[]>('workoutLogs', []);
   const [custom, setCustom] = useLocalStorage<Exercise[]>('customExercises', []);
   const [reports] = useLocalStorage<ReportRecord[]>('progressData', []);
+  const [profile] = useLocalStorage<Pick<UserProfile, 'gender'>>('userProfile', {});
   const [gymDates, setGymDates] = useLocalStorage<string[]>('gymDates', []);
   const [leaveDates] = useLocalStorage<string[]>('leaveDates', []);
   const [restDates] = useLocalStorage<string[]>('restDates', []);
@@ -381,7 +382,7 @@ export function WorkoutSection({ date, onDateChange, open, onOpenChange }: {
 
             <div className="chart-card-title" style={{ marginTop: '1.25rem' }}>Muscles worked</div>
             <p className="chart-card-hint">Hover or tap a muscle. Hotter colour = worked more often.</p>
-            <BodyMap muscles={summary.byMuscle} max={summary.maxHits} />
+            <BodyMap muscles={summary.byMuscle} max={summary.maxHits} gender={profile.gender ?? 'male'} />
             <ul className="muscle-list">
               {[...summary.byMuscle].sort((a, b) => b.hits - a.hits).map(m => (
                 <li key={m.id}>

@@ -138,6 +138,18 @@ export function ReportTab() {
                   <input type="number" className="input-field" value={profileForm.height} onChange={e => setProfileForm(f => ({ ...f, height: Number(e.target.value) }))} required />
                 </div>
                 <div>
+                  <label className="field-label" style={{ fontSize: '0.75rem', marginBottom: '0.1rem' }}>Gender</label>
+                  <div className="seg gender-seg" role="radiogroup" aria-label="Gender">
+                    {(['male', 'female'] as const).map(g => (
+                      <button key={g} type="button" role="radio" aria-checked={(profileForm.gender ?? 'male') === g}
+                        className={`chip ${(profileForm.gender ?? 'male') === g ? 'on' : ''}`}
+                        onClick={() => setProfileForm(f => ({ ...f, gender: g }))}>
+                        {g === 'male' ? 'Male' : 'Female'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
                   <label className="field-label" style={{ fontSize: '0.75rem', marginBottom: '0.1rem' }}>Gym Joined Date</label>
                   <DateField compact label="Gym joined date" value={profileForm.gymJoinedDate} onChange={v => setProfileForm(f => ({ ...f, gymJoinedDate: v }))} />
                 </div>
@@ -152,6 +164,7 @@ export function ReportTab() {
               <h2 className="hero-id">{userProfile.name}</h2>
               <div className="hero-sub">
                 <span className="hero-chip">🎂 {Math.floor((new Date().getTime() - parseDateStr(userProfile.dob).getTime()) / 31557600000)} yrs</span>
+                <span className="hero-chip">{userProfile.gender === 'female' ? '♀ Female' : '♂ Male'}</span>
                 <span className="hero-chip">📏 {userProfile.height} cm</span>
                 <span className="hero-chip">🏋️ Joined {fmtDate(userProfile.gymJoinedDate)}</span>
               </div>

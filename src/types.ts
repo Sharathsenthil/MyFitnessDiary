@@ -23,7 +23,11 @@ export interface UserProfile {
   dob: string;
   height: number;
   gymJoinedDate: string;
+  /** Picks the male or female body in the muscle hologram */
+  gender?: Gender;
 }
+
+export type Gender = 'male' | 'female';
 
 export interface FitnessResponse {
   personalInfo?: UserProfile;
