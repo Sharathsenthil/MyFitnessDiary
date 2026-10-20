@@ -16,7 +16,8 @@ import { DateField } from '../components/DateField';
 export function ReportTab() {
   const { isAdmin, save } = useAuth();
   const [progressData] = useLocalStorage<ReportRecord[]>('progressData', []);
-  const latestData: Partial<ReportRecord> = progressData.length > 0 ? progressData[progressData.length - 1] : {};
+  // Latest known value of each metric, so a weight-only entry doesn't blank the rest
+  const latestData: Partial<ReportRecord> = Object.assign({}, ...progressData);
 
   // Override static data with latest dynamic data safely by merging
   const personalInfo = {

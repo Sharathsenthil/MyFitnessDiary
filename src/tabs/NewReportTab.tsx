@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Plus, TrendingUp } from 'lucide-react';
+import { Plus, TrendingUp, Scale } from 'lucide-react';
 import { NUMERIC_KEYS, type NumericKey, type ReportForm, type ReportRecord } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { parseDateStr, toDateStr } from '../lib/dates';
@@ -27,6 +27,7 @@ export function NewReportTab() {
   });
   const [form, setForm] = useState<ReportForm>(makeBlank);
   const [showSuccess, setShowSuccess] = useState<string>('');
+  const [quick, setQuick] = useState({ date: toDateStr(new Date()), weight: '' });
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
 
@@ -45,6 +46,19 @@ export function NewReportTab() {
     await save({ progressData: updatedData });
     setForm(makeBlank());
     flash('✅ Report saved successfully!');
+  };
+
+  // Weight on its own: keeps every other metric already saved for that date
+  const handleQuickWeight = async (e: FormEvent) => {
+    e.preventDefault();
+    const weight = Number(quick.weight);
+    if (!Number.isFinite(weight) || weight <= 0) return;
+    const existing = progressData.find(r => r.date === quick.date);
+    const updatedData = upsertRecords(progressData, [{ ...existing, date: quick.date, weight }]);
+    setProgressData(updatedData);
+    await save({ progressData: updatedData });
+    setQuick(q => ({ ...q, weight: '' }));
+    flash(`✅ Weight ${weight} kg saved for ${shortDate(quick.date)}.`);
   };
 
   const toForm = (record: ReportRecord): ReportForm => {
@@ -83,6 +97,23 @@ export function NewReportTab() {
           {showSuccess && (
             <div className="success-banner">{showSuccess}</div>
           )}
+
+          <form onSubmit={handleQuickWeight} className="flex flex-col gap-4" style={{ marginBottom: '1.5rem' }}>
+            <div className="form-section-header"><Scale size={16} /> Quick Weight Log</div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="field-label">Date (DD / MM / YY)</label>
+                <DateField value={quick.date} onChange={d => setQuick(q => ({ ...q, date: d }))} />
+              </div>
+              <div>
+                <label className="field-label">Weight (KG)</label>
+                <input type="number" step="0.1" inputMode="decimal" className="input-field" required
+                  value={quick.weight} onChange={e => setQuick(q => ({ ...q, weight: e.target.value }))} placeholder="Enter weight…" />
+              </div>
+            </div>
+            <button type="submit" className="submit-btn">⚖️ Save Weight</button>
+            <p className="section-note">Just want to track weight? Use this. The full report below is optional.</p>
+          </form>
 
           <ImportPanel onFillForm={handleImportOne} onImportMany={handleImportMany} />
 
@@ -128,19 +159,19 @@ export function NewReportTab() {
               <FormField form={form} set={set} label="Protein (KG)" fieldKey="protein" />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <FormField form={form} set={set} label="Body Fat Mass (KG)" fieldKey="fat" required />
+              <FormField form={form} set={set} label="Body Fat Mass (KG)" fieldKey="fat" />
               <FormField form={form} set={set} label="Inorganic Salt (KG)" fieldKey="salt" step="0.01" />
             </div>
 
             {/* Fat & Muscle */}
             <div className="form-section-header">🥓 Fat & Muscle Analysis</div>
             <div className="grid grid-cols-2 gap-4">
-              <FormField form={form} set={set} label="Percent Body Fat (%)" fieldKey="pbf" required />
+              <FormField form={form} set={set} label="Percent Body Fat (%)" fieldKey="pbf" />
               <FormField form={form} set={set} label="Trunk Fat Mass (KG)" fieldKey="trunkFat" />
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <FormField form={form} set={set} label="Muscle Mass (KG)" fieldKey="muscle" required />
-              <FormField form={form} set={set} label="Skeletal Muscle (KG)" fieldKey="smm" required />
+              <FormField form={form} set={set} label="Muscle Mass (KG)" fieldKey="muscle" />
+              <FormField form={form} set={set} label="Skeletal Muscle (KG)" fieldKey="smm" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <FormField form={form} set={set} label="Visceral Fat Index" fieldKey="vfi" />
@@ -212,9 +243,9 @@ export function NewReportTab() {
                   {[...progressData].reverse().map(r => (
                     <tr key={r.date} className="metric-row">
                       <td className="nowrap">{shortDate(r.date)}</td>
-                      <td className="metric-value">{r.weight} <span className="metric-unit">KG</span></td>
-                      <td className="metric-value" style={{ color: 'var(--warning)' }}>{r.fat} <span className="metric-unit">KG</span></td>
-                      <td className="metric-value" style={{ color: 'var(--success)' }}>{r.muscle} <span className="metric-unit">KG</span></td>
+                      <td className="metric-value">{r.weight ?? '–'} <span className="metric-unit">KG</span></td>
+                      <td className="metric-value" style={{ color: 'var(--warning)' }}>{r.fat ?? '–'} <span className="metric-unit">KG</span></td>
+                      <td className="metric-value" style={{ color: 'var(--success)' }}>{r.muscle ?? '–'} <span className="metric-unit">KG</span></td>
                       <td className="metric-value col-pbf" style={{ color: '#3b82f6' }}>{r.pbf ?? '–'} <span className="metric-unit">%</span></td>
                       <td style={{ textAlign: 'right' }}>
                         <button onClick={() => handleEdit(r)} className="tab-btn" style={{ padding: '0.3rem 0.6rem', fontSize: '0.8rem' }}>
