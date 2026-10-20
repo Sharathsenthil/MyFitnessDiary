@@ -572,3 +572,6 @@ body {
 }
 
 
+
+/* First row of a group: open the tooltip downward so the card's top edge doesn't clip it */
+.metric-row:first-child .tooltip-text { bottom: auto; top: calc(100% + 10px); }
