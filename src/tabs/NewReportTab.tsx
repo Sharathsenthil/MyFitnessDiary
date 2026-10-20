@@ -28,6 +28,7 @@ export function NewReportTab() {
   });
   const [form, setForm] = useState<ReportForm>(makeBlank);
   const [showSuccess, setShowSuccess] = useState<string>('');
+  const [mode, setMode] = useState<'weight' | 'full'>('weight');
   const [quick, setQuick] = useState({ date: toDateStr(new Date()), weight: '' });
 
   const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
@@ -72,11 +73,13 @@ export function NewReportTab() {
   };
 
   const handleEdit = (record: ReportRecord) => {
+    setMode('full');
     setForm(toForm(record));
     scrollToTop();
   };
 
   const handleImportOne = (record: ReportRecord) => {
+    setMode('full');
     setForm(toForm(record));
     flash('📥 Report imported into the form - check the values and press Save.');
   };
@@ -93,15 +96,21 @@ export function NewReportTab() {
       <div style={{ width: '100%', margin: '0 auto' }}>
         <div className="glass-panel">
           <div className="panel-header">
-            <div className="panel-title"><Plus size={18} /> 📋 Log Fitness Report</div>
+            <div className="panel-title"><Plus size={18} /> Log Entry</div>
           </div>
 
           {showSuccess && (
             <div className="success-banner">{showSuccess}</div>
           )}
 
-          <form onSubmit={handleQuickWeight} className="flex flex-col gap-4" style={{ marginBottom: '1.5rem' }}>
-            <div className="form-section-header"><Scale size={16} /> Quick Weight Log</div>
+          <div className="flex gap-2 segmented" style={{ marginBottom: '1.25rem' }}>
+            <button type="button" className={`tab-btn ${mode === 'weight' ? 'active' : ''}`} onClick={() => setMode('weight')}>⚖️ Weight only</button>
+            <button type="button" className={`tab-btn ${mode === 'full' ? 'active' : ''}`} onClick={() => setMode('full')}>📋 Full report</button>
+          </div>
+
+          {mode === 'weight' && (
+          <form onSubmit={handleQuickWeight} className="flex flex-col gap-4">
+            <div className="form-section-header"><Scale size={16} /> Log Weight</div>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="field-label">Date (DD / MM / YY)</label>
@@ -114,9 +123,11 @@ export function NewReportTab() {
               </div>
             </div>
             <button type="submit" className="submit-btn">⚖️ Save Weight</button>
-            <p className="section-note">Just want to track weight? Use this. The full report below is optional.</p>
+            <p className="section-note">BMI is worked out from your weight automatically.</p>
           </form>
+          )}
 
+          {mode === 'full' && <>
           <ImportPanel onFillForm={handleImportOne} onImportMany={handleImportMany} />
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -221,6 +232,7 @@ export function NewReportTab() {
               💾 Save Report
             </button>
           </form>
+          </>}
         </div>
 
         {/* History Table */}
