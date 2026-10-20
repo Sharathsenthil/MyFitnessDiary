@@ -8,10 +8,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('✅ Connected to MongoDB'))
-  .catch(err => console.error('❌ MongoDB connection error:', err));
+// Connect to MongoDB. The promise is cached so a serverless host (Vercel) reuses one
+// connection across invocations; every request waits for it (see the middleware below).
+let ready = null;
+const connect = () => {
+  if (!ready) {
+    ready = mongoose.connect(process.env.MONGODB_URI)
+      .then(() => { console.log('✅ Connected to MongoDB'); return loadAdmin(); })
+      .catch(err => { ready = null; throw err; });
+  }
+  return ready;
+};
+app.use('/api', async (req, res, next) => {
+  try { await connect(); next(); } catch (err) {
+    console.error('❌ MongoDB connection error:', err);
+    res.status(500).json({ error: 'Database connection failed' });
+  }
+});
 
 // Basic schema for Fitness Data
 const fitnessSchema = new mongoose.Schema({
@@ -72,7 +85,6 @@ async function loadAdmin() {
   adminCache = doc ? { salt: doc.salt, hash: doc.hash, tokenSecret: doc.tokenSecret } : null;
   if (!adminCache) console.warn('⚠️  No admin password set - editing is disabled.');
 }
-mongoose.connection.once('open', () => loadAdmin().catch(err => console.error('Admin load error:', err)));
 
 const checkPassword = (password) =>
   !!adminCache && typeof password === 'string' &&
@@ -190,7 +202,13 @@ app.get(/.*/, (req, res) => {
   res.sendFile(path.join(distPath, 'index.html'));
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-});
+// Vercel imports the app (api/index.js); everywhere else (Render, local) it listens directly.
+if (require.main === module) {
+  connect().catch(() => {});
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+  });
+}
+
+module.exports = app;
