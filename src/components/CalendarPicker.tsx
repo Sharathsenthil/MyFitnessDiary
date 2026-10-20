@@ -14,6 +14,20 @@ export function DateButton({ children, onClick, label }: { children: ReactNode; 
   );
 }
 
+/** A full-width date button that opens the pop-up calendar; `value` and `onChange` are ISO dates. */
+export function DatePick({ value, onChange, title, max }: { value: string; onChange: (iso: string) => void; title: string; max?: string }) {
+  const [open, setOpen] = useState(false);
+  const day = new Date(value + 'T00:00').toLocaleDateString('en-GB', { weekday: 'short' });
+  return (
+    <>
+      <button type="button" className="date-btn date-pick" onClick={() => setOpen(true)} aria-label={`${title}: ${fmtDate(value)}`} aria-haspopup="dialog">
+        <CalendarDays size={16} aria-hidden="true" /> <span>{day} {fmtDate(value)}</span>
+      </button>
+      {open && <CalendarPicker mode="single" title={title} value={value} max={max} onPick={onChange} onClose={() => setOpen(false)} />}
+    </>
+  );
+}
+
 type Common = { max?: string; title: string; onClose: () => void };
 type Props =
   | (Common & { mode: 'single'; value: string; onPick: (iso: string) => void })

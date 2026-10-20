@@ -8,7 +8,7 @@ import { fitnessData } from '../data';
 import { scrollToTop } from '../lib/scroll';
 import { calcBmi, cleanRecord, upsertRecords } from '../lib/records';
 import { FormField } from '../components/FormField';
-import { DateField } from '../components/DateField';
+import { DatePick } from '../components/CalendarPicker';
 import { ImportPanel } from '../components/ImportPanel';
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -113,8 +113,8 @@ export function NewReportTab() {
             <div className="form-section-header"><Scale size={16} /> Log Weight</div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="field-label">Date (DD / MM / YY)</label>
-                <DateField value={quick.date} onChange={d => setQuick(q => ({ ...q, date: d }))} />
+                <label className="field-label">Date</label>
+                <DatePick title="Weigh-in date" value={quick.date} onChange={d => setQuick(q => ({ ...q, date: d }))} />
               </div>
               <div>
                 <label className="field-label">Weight (KG)</label>
@@ -134,8 +134,8 @@ export function NewReportTab() {
             {/* Date */}
             <div className="form-section-header">🗓 Report Date</div>
             <div>
-              <label className="field-label">Report date (DD / MM / YY)</label>
-              <DateField value={form.date} onChange={d => set('date', d)} />
+              <label className="field-label">Report date</label>
+              <DatePick title="Report date" value={form.date} onChange={d => set('date', d)} />
             </div>
 
             {/* Overall Summary */}
