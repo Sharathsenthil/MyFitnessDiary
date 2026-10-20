@@ -49,3 +49,7 @@ export function downloadCsv(records: ReportRecord[], filename = 'fitness_data.cs
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+/** BMI from weight (kg) and height (cm), rounded to 2 decimals. */
+export const calcBmi = (weightKg: number, heightCm: number) =>
+  Math.round((weightKg / ((heightCm / 100) ** 2)) * 100) / 100;

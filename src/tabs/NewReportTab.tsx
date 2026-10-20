@@ -4,8 +4,9 @@ import { NUMERIC_KEYS, type NumericKey, type ReportForm, type ReportRecord } fro
 import { useLocalStorage } from '../lib/storage';
 import { parseDateStr, toDateStr } from '../lib/dates';
 import { useAuth } from '../lib/auth';
+import { fitnessData } from '../data';
 import { scrollToTop } from '../lib/scroll';
-import { cleanRecord, upsertRecords } from '../lib/records';
+import { calcBmi, cleanRecord, upsertRecords } from '../lib/records';
 import { FormField } from '../components/FormField';
 import { DateField } from '../components/DateField';
 import { ImportPanel } from '../components/ImportPanel';
@@ -41,6 +42,7 @@ export function NewReportTab() {
     e.preventDefault();
     // Blank fields are left out of the record instead of being stored as ''
     const record = cleanRecord({ ...form }) as ReportRecord;
+    if (record.bmi === undefined && record.weight) record.bmi = calcBmi(record.weight, fitnessData.personalInfo.height);
     const updatedData = upsertRecords(progressData, [record]);
     setProgressData(updatedData);
     await save({ progressData: updatedData });
@@ -54,11 +56,11 @@ export function NewReportTab() {
     const weight = Number(quick.weight);
     if (!Number.isFinite(weight) || weight <= 0) return;
     const existing = progressData.find(r => r.date === quick.date);
-    const updatedData = upsertRecords(progressData, [{ ...existing, date: quick.date, weight }]);
+    const updatedData = upsertRecords(progressData, [{ ...existing, date: quick.date, weight, bmi: calcBmi(weight, fitnessData.personalInfo.height) }]);
     setProgressData(updatedData);
     await save({ progressData: updatedData });
     setQuick(q => ({ ...q, weight: '' }));
-    flash(`✅ Weight ${weight} kg saved for ${shortDate(quick.date)}.`);
+    flash(`✅ Weight ${weight} kg saved for ${shortDate(quick.date)} (BMI ${calcBmi(weight, fitnessData.personalInfo.height)}).`);
   };
 
   const toForm = (record: ReportRecord): ReportForm => {
