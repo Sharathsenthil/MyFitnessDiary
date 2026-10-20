@@ -471,8 +471,8 @@ body {
   padding: 0.65rem 0.8rem;
   position: absolute;
   bottom: calc(100% + 10px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  max-width: min(220px, 70vw);
   z-index: 9999;
   opacity: 0;
   transition: opacity 0.2s ease, visibility 0.2s;

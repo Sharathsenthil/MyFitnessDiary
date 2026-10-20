@@ -74,4 +74,7 @@ export interface WorkoutEntry {
   exerciseId: string;
   amount: number;
   sets?: WorkoutSet[];
+  /** Treadmill only: average speed (km/h) and incline (%) */
+  speed?: number;
+  incline?: number;
 }

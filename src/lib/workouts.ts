@@ -279,8 +279,23 @@ export function latestWeight(reports: ReportRecord[]): number {
   return withWeight.length ? withWeight[withWeight.length - 1].weight! : FALLBACK_WEIGHT_KG;
 }
 
+export interface TreadmillInfo { speed?: number; incline?: number }
+export const isTreadmill = (ex?: Exercise | null) => ex?.id === 'treadmill';
+
+/**
+ * Treadmill calories from speed (km/h), incline (%), minutes and body weight, using the ACSM equations:
+ * walking VO2 = 0.1*S + 1.8*S*G + 3.5, running VO2 = 0.2*S + 0.9*S*G + 3.5 (S in m/min, G as a fraction, ml/kg/min).
+ * Below 7 km/h counts as walking. 1 litre of oxygen is about 5 kcal.
+ */
+export function treadmillKcal(speedKmh: number, inclinePct: number, minutes: number, weightKg: number): number {
+  const s = (speedKmh * 1000) / 60, g = Math.max(0, inclinePct) / 100;
+  const vo2 = speedKmh < 7 ? 0.1 * s + 1.8 * s * g + 3.5 : 0.2 * s + 0.9 * s * g + 3.5;
+  return (vo2 * weightKg * minutes * 5) / 1000;
+}
+
 /** Time exercises use MET x kg x hours; rep exercises use kcal per rep (scaled to a 70 kg body). */
-export function caloriesFor(ex: Exercise, amount: number, weightKg: number): number {
+export function caloriesFor(ex: Exercise, amount: number, weightKg: number, treadmill?: TreadmillInfo): number {
+  if (ex.mode === 'time' && treadmill?.speed) return treadmillKcal(treadmill.speed, treadmill.incline ?? 0, amount, weightKg);
   if (ex.mode === 'time') return (ex.met ?? 5) * weightKg * (amount / 60);
   return (ex.kcalPerRep ?? 0.4) * amount * (weightKg / FALLBACK_WEIGHT_KG);
 }
@@ -339,7 +354,7 @@ export function summarize(entries: WorkoutEntry[], exercises: Exercise[], range:
     const ex = byId.get(entry.exerciseId);
     if (!ex) continue;
     days.add(entry.date);
-    const cal = caloriesFor(ex, entry.amount, weightKg);
+    const cal = caloriesFor(ex, entry.amount, weightKg, entry);
     kcal += cal;
     if (ex.mode === 'time') minutes += entry.amount; else repCount += entry.amount;
     const t = totals.get(ex.id) ?? { exercise: ex, amount: 0, sessions: 0, kcal: 0, volume: 0, maxWeight: 0 };

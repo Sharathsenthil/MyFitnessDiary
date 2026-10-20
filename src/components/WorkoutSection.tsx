@@ -4,7 +4,7 @@ import type { Exercise, MuscleId, ReportRecord, UserProfile, WorkoutEntry, Worko
 import { useLocalStorage } from '../lib/storage';
 import { useAuth } from '../lib/auth';
 import type { ExerciseGroup } from '../lib/workouts';
-import { GROUPS, MUSCLES, QUICK_IDS, caloriesFor, exerciseGroup, exerciseIcon, describeSets, entriesOn, latestWeight, mergeExercises, normName, periodRange, searchExercises, summarize, type Period } from '../lib/workouts';
+import { GROUPS, MUSCLES, QUICK_IDS, caloriesFor, isTreadmill, treadmillKcal, exerciseGroup, exerciseIcon, describeSets, entriesOn, latestWeight, mergeExercises, normName, periodRange, searchExercises, summarize, type Period } from '../lib/workouts';
 import { fmtDate, toDateStr } from '../lib/dates';
 import { CalendarPicker, DateButton } from './CalendarPicker';
 import { BodyMap } from './BodyMap';
@@ -56,6 +56,8 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
   const [pickedId, setPickedId] = useState<string | null>(QUICK_IDS[0]);
   const [query, setQuery] = useState('');
   const [amount, setAmount] = useState('');
+  const [speed, setSpeed] = useState('');
+  const [incline, setIncline] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   // Counted workouts: sets of reps at a weight, the same for every set or set by set
   const [setCount, setSetCount] = useState('3');
@@ -103,11 +105,11 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
   const summary = useMemo(() => summarize(counted, exercises, range, weight), [counted, exercises, range?.[0], range?.[1], weight]);
   const dayKcal = dayEntries.reduce((s, e) => {
     const ex = exercises.find(x => x.id === e.exerciseId);
-    return s + (ex ? caloriesFor(ex, e.amount, weight) : 0);
+    return s + (ex ? caloriesFor(ex, e.amount, weight, e) : 0);
   }, 0);
 
   const resetForm = () => {
-    setEditingId(null); setQuery(''); setAmount(''); setAdding(false); setDraft(BLANK_DRAFT);
+    setEditingId(null); setQuery(''); setAmount(''); setSpeed(''); setIncline(''); setAdding(false); setDraft(BLANK_DRAFT);
     setSetCount('3'); setSameWeight(true); setShared(BLANK_ROW); setRows([]); setPickedId(QUICK_IDS[0]);
   };
   const closeForm = () => { resetForm(); onOpenChange(false); };
@@ -115,7 +117,7 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
   const startEdit = (en: WorkoutEntry) => {
     setEditingId(en.id); setPickedId(en.exerciseId); setQuery(''); setAdding(false);
     const ex = exercises.find(x => x.id === en.exerciseId);
-    if (ex?.mode === 'time') setAmount(String(en.amount));
+    if (ex?.mode === 'time') { setAmount(String(en.amount)); setSpeed(en.speed ? String(en.speed) : ''); setIncline(en.incline ? String(en.incline) : ''); }
     else {
       const sets = en.sets?.length ? en.sets : [{ reps: en.amount, weight: 0 }];
       const same = sets.every(s => s.reps === sets[0].reps && s.weight === sets[0].weight);
@@ -135,6 +137,12 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
       const n = Number(amount);
       if (!(n > 0)) return;
       entry = { id, date, exerciseId: picked.id, amount: n };
+      if (isTreadmill(picked)) {
+        const sp = Number(speed);
+        if (!(sp > 0)) return;
+        entry.speed = sp;
+        if (Number(incline) > 0) entry.incline = Number(incline);
+      }
     } else {
       const sets: WorkoutSet[] = Array.from({ length: nSets }, (_, i) => {
         const r = sameWeight ? shared : rowAt(i);
@@ -345,6 +353,21 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
         <form className="sets-form" onSubmit={submitEntry}>
           <input className="input-field" type="number" min="1" step="1" inputMode="numeric" required
             placeholder={picked ? 'Minutes' : 'Pick a workout first'} disabled={!picked} value={amount} onChange={e => setAmount(e.target.value)} />
+          {isTreadmill(picked) && (
+            <>
+              <div className="set-row">
+                <input className="input-field" type="number" min="0.1" step="0.1" inputMode="decimal" required placeholder="Avg speed (km/h)"
+                  value={speed} onChange={e => setSpeed(e.target.value)} />
+                <input className="input-field" type="number" min="0" max="40" step="0.5" inputMode="decimal" placeholder="Incline (%)"
+                  value={incline} onChange={e => setIncline(e.target.value)} />
+              </div>
+              {Number(amount) > 0 && Number(speed) > 0 && (
+                <p className="section-note" style={{ margin: 0 }}>
+                  ≈ {+((Number(speed) * Number(amount)) / 60).toFixed(2)} km · {Math.round(treadmillKcal(Number(speed), Number(incline) || 0, Number(amount), weight))} kcal at {weight} kg
+                </p>
+              )}
+            </>
+          )}
           <div className="form-actions">
             <button type="submit" className="submit-btn" disabled={!picked}>{editingId ? 'Save changes' : 'Add'}</button>
             <button type="button" className="tab-btn cancel-btn" onClick={closeForm}>{editingId ? 'Cancel' : 'Done'}</button>
@@ -377,9 +400,9 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
               if (!ex) return null;
               return (
                 <li key={en.id} className={editingId === en.id ? 'editing' : ''}>
-                  <span className="entry-name"><ExIcon ex={ex} />{ex.name}{en.sets?.length ? <small className="entry-sub">{describeSets(en.sets)}</small> : null}</span>
+                  <span className="entry-name"><ExIcon ex={ex} />{ex.name}{en.sets?.length ? <small className="entry-sub">{describeSets(en.sets)}</small> : en.speed ? <small className="entry-sub">{`${en.speed} km/h${en.incline ? ` · ${en.incline}% incline` : ''} · ${+((en.speed * en.amount) / 60).toFixed(2)} km`}</small> : null}</span>
                   {!en.sets?.length && <span className="entry-amt">{en.amount} {unitOf(ex)}</span>}
-                  <span className="entry-kcal">{Math.round(caloriesFor(ex, en.amount, weight))} kcal</span>
+                  <span className="entry-kcal">{Math.round(caloriesFor(ex, en.amount, weight, en))} kcal</span>
                   {isAdmin && (
                     <>
                       {!blockedDay && <button type="button" className="icon-btn" aria-label={`Edit ${ex.name}`} onClick={() => startEdit(en)}><Pencil size={15} /></button>}
