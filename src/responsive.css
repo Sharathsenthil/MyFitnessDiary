@@ -538,3 +538,10 @@ button { touch-action: manipulation; }
 .picked-bar { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.7rem; padding: 0.5rem 0.7rem; border: 1px solid var(--card-border); border-radius: 12px; background: var(--panel-bg); }
 .picked-name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 420px) { .tile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.entry-ico {
+  --tile-color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center; vertical-align: middle;
+  width: 26px; height: 26px; margin-right: 0.5rem; border-radius: 8px; font-size: 0.95rem; line-height: 1;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tile-color) 38%, transparent), color-mix(in srgb, var(--tile-color) 12%, transparent));
+  border: 1px solid color-mix(in srgb, var(--tile-color) 45%, transparent);
+}

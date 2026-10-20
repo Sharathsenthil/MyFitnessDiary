@@ -9,6 +9,12 @@ import { fmtDate, toDateStr } from '../lib/dates';
 import { CalendarPicker, DateButton } from './CalendarPicker';
 import { BodyMap } from './BodyMap';
 
+/** Small coloured picture badge for a workout, in its category colour. */
+function ExIcon({ ex }: { ex: Exercise }) {
+  const color = GROUPS.find(g => g.id === exerciseGroup(ex))!.color;
+  return <span className="entry-ico" style={{ ['--tile-color' as string]: color }} aria-hidden="true">{exerciseIcon(ex)}</span>;
+}
+
 const PERIODS: { id: Period; label: string }[] = [
   { id: 'week', label: 'Week' },
   { id: 'month', label: 'Month' },
@@ -371,7 +377,7 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
               if (!ex) return null;
               return (
                 <li key={en.id} className={editingId === en.id ? 'editing' : ''}>
-                  <span className="entry-name">{ex.name}{en.sets?.length ? <small className="entry-sub">{describeSets(en.sets)}</small> : null}</span>
+                  <span className="entry-name"><ExIcon ex={ex} />{ex.name}{en.sets?.length ? <small className="entry-sub">{describeSets(en.sets)}</small> : null}</span>
                   {!en.sets?.length && <span className="entry-amt">{en.amount} {unitOf(ex)}</span>}
                   <span className="entry-kcal">{Math.round(caloriesFor(ex, en.amount, weight))} kcal</span>
                   {isAdmin && (
@@ -428,7 +434,7 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
             <ul className="entry-list">
               {summary.byExercise.map(t => (
                 <li key={t.exercise.id}>
-                  <span className="entry-name">{t.exercise.name}</span>
+                  <span className="entry-name"><ExIcon ex={t.exercise} />{t.exercise.name}</span>
                   <span className="entry-amt">{t.exercise.mode === 'time' ? fmtMin(t.amount) : `${t.amount} reps${t.volume > 0 ? ` · ${Math.round(t.volume)} kg` : ''}`}</span>
                   <span className="entry-kcal">{Math.round(t.kcal)} kcal</span>
                 </li>
