@@ -42,6 +42,21 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   time('Plank', 3.5, 'abs', 'shoulders'),
   time('Stretching', 2.3),
   time('Cool-down', 2.5),
+  time('Sprinting', 12, 'quads', 'hamstrings', 'glutes', 'calves'),
+  time('Hiking', 6, 'quads', 'glutes', 'calves'),
+  time('Spin class', 8.5, 'quads', 'hamstrings', 'glutes', 'calves'),
+  time('Jumping jacks', 8, 'calves', 'shoulders', 'quads'),
+  time('Burpees', 10, 'chest', 'quads', 'abs', 'shoulders'),
+  time('Box jumps', 8, 'quads', 'glutes', 'calves'),
+  time('Kettlebell swings', 9.8, 'glutes', 'hamstrings', 'back', 'shoulders'),
+  time('Farmer walk', 6, 'forearms', 'back', 'abs', 'quads'),
+  time('Boxing', 7.8, 'shoulders', 'abs', 'chest', 'biceps'),
+  time('Zumba', 6.5, 'quads', 'glutes', 'calves', 'abs'),
+  time('Yoga', 3, 'abs', 'shoulders', 'hamstrings'),
+  time('Pilates', 3.5, 'abs', 'glutes'),
+  time('Sled push', 9, 'quads', 'glutes', 'calves', 'shoulders'),
+  time('Side plank', 3.5, 'abs'),
+  time('Wall sit', 3.5, 'quads', 'glutes'),
   // Chest
   reps('Chest press', 0.5, 'chest', 'triceps', 'shoulders'),
   reps('Bench press', 0.5, 'chest', 'triceps', 'shoulders'),
@@ -53,6 +68,14 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   reps('Pec deck', 0.3, 'chest'),
   reps('Push-ups', 0.32, 'chest', 'triceps', 'shoulders', 'abs'),
   reps('Chest dips', 0.45, 'chest', 'triceps', 'shoulders'),
+  reps('Dumbbell bench press', 0.5, 'chest', 'triceps', 'shoulders'),
+  reps('Smith machine press', 0.5, 'chest', 'triceps', 'shoulders'),
+  reps('Machine chest fly', 0.3, 'chest'),
+  reps('Low cable fly', 0.3, 'chest', 'shoulders'),
+  reps('Diamond push-ups', 0.35, 'triceps', 'chest', 'shoulders'),
+  reps('Decline push-ups', 0.35, 'chest', 'shoulders', 'triceps'),
+  reps('Incline push-ups', 0.28, 'chest', 'triceps'),
+  reps('Dumbbell pullover', 0.3, 'chest', 'back'),
   // Back
   reps('Lat pulldown', 0.4, 'back', 'biceps'),
   reps('Seated row', 0.4, 'back', 'biceps'),
@@ -65,6 +88,17 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   reps('Back extension', 0.3, 'back', 'glutes', 'hamstrings'),
   reps('Face pull', 0.25, 'shoulders', 'back'),
   reps('Shrugs', 0.3, 'back', 'shoulders', 'forearms'),
+  reps('Cable row', 0.4, 'back', 'biceps'),
+  reps('Machine row', 0.4, 'back', 'biceps'),
+  reps('Wide-grip lat pulldown', 0.4, 'back', 'biceps'),
+  reps('Close-grip lat pulldown', 0.4, 'back', 'biceps'),
+  reps('Straight-arm pulldown', 0.3, 'back'),
+  reps('Inverted row', 0.35, 'back', 'biceps'),
+  reps('Sumo deadlift', 0.8, 'glutes', 'hamstrings', 'back', 'quads'),
+  reps('Rack pull', 0.7, 'back', 'forearms', 'glutes'),
+  reps('Good morning', 0.4, 'hamstrings', 'back', 'glutes'),
+  reps('Superman', 0.15, 'back', 'glutes'),
+  reps('Dumbbell shrugs', 0.3, 'back', 'shoulders', 'forearms'),
   // Shoulders
   reps('Shoulder press', 0.45, 'shoulders', 'triceps'),
   reps('Arnold press', 0.45, 'shoulders', 'triceps'),
@@ -72,6 +106,14 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   reps('Front raise', 0.25, 'shoulders'),
   reps('Rear delt fly', 0.25, 'shoulders', 'back'),
   reps('Upright row', 0.35, 'shoulders', 'back'),
+  reps('Dumbbell shoulder press', 0.45, 'shoulders', 'triceps'),
+  reps('Machine shoulder press', 0.45, 'shoulders', 'triceps'),
+  reps('Military press', 0.5, 'shoulders', 'triceps', 'abs'),
+  reps('Cable lateral raise', 0.25, 'shoulders'),
+  reps('Reverse pec deck', 0.25, 'shoulders', 'back'),
+  reps('Landmine press', 0.4, 'shoulders', 'chest', 'triceps'),
+  reps('Pike push-ups', 0.35, 'shoulders', 'triceps'),
+  reps('Handstand push-ups', 0.5, 'shoulders', 'triceps'),
   // Biceps and forearms
   reps('Bicep curl', 0.25, 'biceps', 'forearms'),
   reps('Hammer curl', 0.25, 'biceps', 'forearms'),
@@ -80,6 +122,14 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   reps('Cable curl', 0.25, 'biceps'),
   reps('Wrist curl', 0.15, 'forearms'),
   reps('Reverse curl', 0.2, 'forearms', 'biceps'),
+  reps('Incline dumbbell curl', 0.25, 'biceps'),
+  reps('Barbell curl', 0.25, 'biceps', 'forearms'),
+  reps('EZ-bar curl', 0.25, 'biceps', 'forearms'),
+  reps('Zottman curl', 0.25, 'biceps', 'forearms'),
+  reps('Spider curl', 0.25, 'biceps'),
+  reps('Rope hammer curl', 0.25, 'biceps', 'forearms'),
+  reps('Reverse wrist curl', 0.15, 'forearms'),
+  reps('Farmer hold', 0.2, 'forearms'),
   // Triceps
   reps('Tricep pushdown', 0.25, 'triceps'),
   reps('Skull crushers', 0.3, 'triceps'),
@@ -87,6 +137,12 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   reps('Close-grip bench press', 0.45, 'triceps', 'chest'),
   reps('Tricep dips', 0.45, 'triceps', 'chest', 'shoulders'),
   reps('Tricep kickback', 0.2, 'triceps'),
+  reps('Rope pushdown', 0.25, 'triceps'),
+  reps('Reverse-grip pushdown', 0.25, 'triceps'),
+  reps('Bench dips', 0.4, 'triceps', 'shoulders'),
+  reps('Cable overhead extension', 0.25, 'triceps'),
+  reps('Dumbbell overhead extension', 0.25, 'triceps'),
+  reps('JM press', 0.4, 'triceps', 'chest'),
   // Abs
   reps('Crunches', 0.15, 'abs'),
   reps('Sit-ups', 0.2, 'abs'),
@@ -96,6 +152,16 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   reps('Cable crunch', 0.2, 'abs'),
   reps('Ab wheel', 0.3, 'abs', 'shoulders'),
   reps('Mountain climbers', 0.2, 'abs', 'shoulders', 'quads'),
+  reps('Bicycle crunch', 0.18, 'abs'),
+  reps('Flutter kicks', 0.15, 'abs'),
+  reps('Reverse crunch', 0.15, 'abs'),
+  reps('Decline sit-ups', 0.25, 'abs'),
+  reps('Toe touches', 0.15, 'abs'),
+  reps('Dead bug', 0.12, 'abs'),
+  reps('Cable woodchop', 0.2, 'abs'),
+  reps('V-ups', 0.25, 'abs'),
+  reps('Heel touches', 0.12, 'abs'),
+  reps('Knee raises', 0.2, 'abs'),
   // Legs and glutes
   reps('Squats', 0.5, 'quads', 'glutes', 'hamstrings'),
   reps('Goblet squat', 0.4, 'quads', 'glutes'),
@@ -110,9 +176,70 @@ export const DEFAULT_EXERCISES: Exercise[] = [
   reps('Hip thrust', 0.4, 'glutes', 'hamstrings'),
   reps('Glute kickback', 0.2, 'glutes'),
   reps('Calf raises', 0.2, 'calves'),
+  reps('Front squat', 0.55, 'quads', 'glutes', 'abs'),
+  reps('Sumo squat', 0.4, 'quads', 'glutes', 'hamstrings'),
+  reps('Smith machine squat', 0.5, 'quads', 'glutes'),
+  reps('Jump squats', 0.5, 'quads', 'glutes', 'calves'),
+  reps('Walking lunges', 0.4, 'quads', 'glutes', 'hamstrings'),
+  reps('Reverse lunges', 0.4, 'quads', 'glutes', 'hamstrings'),
+  reps('Glute bridge', 0.25, 'glutes', 'hamstrings'),
+  reps('Cable pull-through', 0.3, 'glutes', 'hamstrings'),
+  reps('Donkey kicks', 0.2, 'glutes'),
+  reps('Hip abduction', 0.2, 'glutes'),
+  reps('Hip adduction', 0.2, 'quads'),
+  reps('Seated calf raise', 0.2, 'calves'),
+  reps('Standing calf raise', 0.2, 'calves'),
+  reps('Single-leg deadlift', 0.4, 'hamstrings', 'glutes', 'back'),
+  reps('Nordic curl', 0.4, 'hamstrings'),
+  reps('Sissy squat', 0.35, 'quads'),
 ];
 
 export const normName = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
+export type ExerciseGroup = 'cardio' | 'chest' | 'back' | 'shoulders' | 'arms' | 'abs' | 'legs' | 'other';
+
+export const GROUPS: { id: ExerciseGroup; label: string; emoji: string; color: string }[] = [
+  { id: 'cardio', label: 'Cardio', emoji: '🏃', color: '#f97316' },
+  { id: 'chest', label: 'Chest', emoji: '🏋️', color: '#ef4444' },
+  { id: 'back', label: 'Back', emoji: '🧗', color: '#3b82f6' },
+  { id: 'shoulders', label: 'Shoulders', emoji: '🤷', color: '#8b5cf6' },
+  { id: 'arms', label: 'Arms', emoji: '💪', color: '#ec4899' },
+  { id: 'abs', label: 'Abs', emoji: '🔥', color: '#eab308' },
+  { id: 'legs', label: 'Legs', emoji: '🦵', color: '#10b981' },
+  { id: 'other', label: 'Other', emoji: '⭐', color: '#64748b' },
+];
+
+const MUSCLE_GROUP: Record<MuscleId, ExerciseGroup> = {
+  chest: 'chest', back: 'back', shoulders: 'shoulders', biceps: 'arms', triceps: 'arms', forearms: 'arms',
+  abs: 'abs', quads: 'legs', hamstrings: 'legs', glutes: 'legs', calves: 'legs',
+};
+
+/** Which tab an exercise sits under: timed presets are Cardio (plank-style ones Abs), the rest follow their main muscle. */
+export function exerciseGroup(ex: Exercise): ExerciseGroup {
+  if (ex.mode === 'time' && ex.builtin) return ex.muscles[0] === 'abs' && /plank/i.test(ex.name) ? 'abs' : 'cardio';
+  return ex.muscles[0] ? MUSCLE_GROUP[ex.muscles[0]] : 'other';
+}
+
+const ICONS: [RegExp, string][] = [
+  [/treadmill|jogging|running|sprint|elliptical/, '🏃'], [/walk|hiking/, '🚶'], [/cycl|spin|bike/, '🚴'],
+  [/swim/, '🏊'], [/rowing machine/, '🚣'], [/rope|battle/, '🪢'], [/boxing/, '🥊'],
+  [/yoga|stretch|pilates|cool/, '🧘'], [/zumba|dance/, '💃'], [/warm/, '🤸'],
+  [/hiit|burpee|jumping jacks|box jump|jump squat/, '🤾'], [/stair/, '🪜'], [/kettlebell|swing/, '🔔'], [/sled/, '🛷'],
+  [/plank|dead bug/, '🧎'], [/push-ups/, '🤸'], [/pull-ups|chin-ups|hanging/, '🧗'],
+  [/deadlift|rack pull|good morning/, '🏋️'], [/squat|wall sit/, '🏋️'], [/lunge|step-ups/, '🦵'], [/calf/, '🦶'],
+  [/curl/, '💪'], [/dip/, '🤸'],
+  [/crunch|sit-ups|twist|leg raise|knee raise|v-ups|flutter|toe touch|heel touch|ab wheel|woodchop|mountain/, '🔥'],
+  [/press|fly|pec|crossover|bench/, '🏋️'], [/row|pulldown|pullover|shrug|face pull|superman/, '🧗'],
+  [/raise|shoulder/, '🤷'], [/tricep|pushdown|skull|kickback|extension|jm press/, '💪'], [/hip|glute|bridge|donkey/, '🍑'],
+];
+
+/** The picture on a workout button: an icon matched from its name, else its category icon. */
+export function exerciseIcon(ex: Exercise): string {
+  const n = normName(ex.name);
+  for (const [re, icon] of ICONS) if (re.test(n)) return icon;
+  return GROUPS.find(g => g.id === exerciseGroup(ex))!.emoji;
+}
+
 
 /**
  * Presets plus your own workouts. A custom workout named like a preset (e.g. an older "Chest press")

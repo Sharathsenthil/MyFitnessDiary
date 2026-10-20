@@ -1,9 +1,10 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useMemo, useRef, useState, type FormEvent } from 'react';
 import { Plus, Trash2, Pencil, Flame, Timer, Repeat, Activity, Ban } from 'lucide-react';
 import type { Exercise, MuscleId, ReportRecord, UserProfile, WorkoutEntry, WorkoutSet } from '../types';
 import { useLocalStorage } from '../lib/storage';
 import { useAuth } from '../lib/auth';
-import { MUSCLES, QUICK_IDS, caloriesFor, describeSets, entriesOn, latestWeight, mergeExercises, normName, periodRange, searchExercises, summarize, type Period } from '../lib/workouts';
+import type { ExerciseGroup } from '../lib/workouts';
+import { GROUPS, MUSCLES, QUICK_IDS, caloriesFor, exerciseGroup, exerciseIcon, describeSets, entriesOn, latestWeight, mergeExercises, normName, periodRange, searchExercises, summarize, type Period } from '../lib/workouts';
 import { fmtDate, toDateStr } from '../lib/dates';
 import { CalendarPicker, DateButton } from './CalendarPicker';
 import { BodyMap } from './BodyMap';
@@ -44,6 +45,8 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
   const logs = useMemo(() => rawLogs.map(l => alias.has(l.exerciseId) ? { ...l, exerciseId: alias.get(l.exerciseId)! } : l), [rawLogs, alias]);
   const weight = latestWeight(reports);
 
+  const [cat, setCat] = useState<'recent' | ExerciseGroup>('recent');
+  const entryRef = useRef<HTMLDivElement>(null);
   const [pickedId, setPickedId] = useState<string | null>(QUICK_IDS[0]);
   const [query, setQuery] = useState('');
   const [amount, setAmount] = useState('');
@@ -79,7 +82,13 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
     return ids.map(id => exercises.find(e => e.id === id)).filter((e): e is Exercise => !!e);
   }, [logs, exercises]);
 
-  const pick = (ex: Exercise) => { setPickedId(ex.id); setQuery(''); setAdding(false); };
+  const pick = (ex: Exercise) => {
+    setPickedId(ex.id); setQuery(''); setAdding(false);
+    // Bring the entry fields into view so the next tap is the amount
+    setTimeout(() => entryRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' }), 50);
+  };
+  const groupsPresent = useMemo(() => GROUPS.filter(g => exercises.some(e => exerciseGroup(e) === g.id)), [exercises]);
+  const tiles = cat === 'recent' ? quick : exercises.filter(e => exerciseGroup(e) === cat);
   const dayEntries = entriesOn(logs, date);
   // Workouts on a day later marked Rest or Leave are kept but not counted in the report
   const counted = useMemo(() => logs.filter(l => !blocked.has(l.date)), [logs, blocked]);
@@ -199,6 +208,7 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
           {matches.map(ex => (
             <li key={ex.id}>
               <button type="button" role="option" aria-selected={ex.id === pickedId} onClick={() => pick(ex)}>
+                <span aria-hidden="true">{exerciseIcon(ex)}</span>
                 <span className="suggest-name">{ex.name}</span>
                 <span className="suggest-meta">{ex.mode === 'time' ? 'minutes' : 'reps'}</span>
               </button>
@@ -213,15 +223,32 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
           )}
         </ul>
       ) : (
-        <div className="chip-row" role="radiogroup" aria-label="Quick workouts">
-          {quick.map(ex => (
-            <button key={ex.id} type="button" role="radio" aria-checked={ex.id === pickedId}
-              className={`chip ${ex.id === pickedId ? 'on' : ''}`} onClick={() => pick(ex)}>
-              {ex.name}
-            </button>
-          ))}
-          {picked && !quick.some(q => q.id === picked.id) && <button type="button" role="radio" aria-checked className="chip on">{picked.name}</button>}
-        </div>
+        <>
+          <div className="cat-row" role="tablist" aria-label="Workout categories">
+            <button type="button" role="tab" aria-selected={cat === 'recent'} className={`chip ${cat === 'recent' ? 'on' : ''}`} onClick={() => setCat('recent')}>⏱️ Recent</button>
+            {groupsPresent.map(g => (
+              <button key={g.id} type="button" role="tab" aria-selected={cat === g.id} className={`chip ${cat === g.id ? 'on' : ''}`} onClick={() => setCat(g.id)}>{g.emoji} {g.label}</button>
+            ))}
+          </div>
+          <div className="tile-grid" role="radiogroup" aria-label="Workouts">
+            {tiles.map(ex => {
+              const color = GROUPS.find(g => g.id === exerciseGroup(ex))!.color;
+              return (
+                <button key={ex.id} type="button" role="radio" aria-checked={ex.id === pickedId}
+                  className={`tile ${ex.id === pickedId ? 'on' : ''}`} onClick={() => pick(ex)}>
+                  <span className="tile-img" style={{ ['--tile-color' as string]: color }} aria-hidden="true">{exerciseIcon(ex)}</span>
+                  <span className="tile-name">{ex.name}</span>
+                </button>
+              );
+            })}
+            {isAdmin && (
+              <button type="button" className="tile tile-add" onClick={() => { setDraft(d => ({ ...d, name: '' })); setAdding(true); }}>
+                <span className="tile-img" aria-hidden="true"><Plus size={22} /></span>
+                <span className="tile-name">New workout</span>
+              </button>
+            )}
+          </div>
+        </>
       )}
 
       {adding && (
@@ -267,6 +294,14 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
         </form>
       )}
 
+      <div ref={entryRef}>
+      {picked && (
+        <div className="picked-bar">
+          <span className="tile-img small" style={{ ['--tile-color' as string]: GROUPS.find(g => g.id === exerciseGroup(picked))!.color }} aria-hidden="true">{exerciseIcon(picked)}</span>
+          <span className="picked-name">{picked.name}</span>
+          <span className="suggest-meta">{picked.mode === 'time' ? 'minutes' : 'reps'}</span>
+        </div>
+      )}
       {picked?.mode === 'reps' ? (
         <form className="sets-form" onSubmit={submitEntry}>
           <div className="sets-head">
@@ -310,6 +345,7 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
           </div>
         </form>
       )}
+      </div>
     </div>
   );
 

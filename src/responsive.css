@@ -507,3 +507,34 @@ button { touch-action: manipulation; }
   .muscle-section { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 1.5rem; align-items: center; }
   .muscle-section .holo { margin-bottom: 0; }
 }
+
+/* workout picker: category tabs + image tiles */
+.cat-row { display: flex; gap: 0.4rem; margin: 0.6rem 0; overflow-x: auto; padding-bottom: 0.25rem; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.cat-row::-webkit-scrollbar { display: none; }
+.cat-row .chip { flex: 0 0 auto; }
+.tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 0.5rem; margin: 0.4rem 0 0.9rem; }
+.tile {
+  display: flex; flex-direction: column; align-items: center; gap: 0.35rem; min-width: 0;
+  padding: 0.55rem 0.3rem; background: var(--panel-bg); color: var(--text-main);
+  border: 1px solid var(--card-border); border-radius: 14px; font: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.tile.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+@media (hover: hover) { .tile:hover { background: var(--hover-bg); } }
+.tile-img {
+  --tile-color: var(--accent);
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 52px; height: 52px; border-radius: 14px; font-size: 1.7rem; line-height: 1;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--tile-color) 38%, transparent), color-mix(in srgb, var(--tile-color) 12%, transparent));
+  border: 1px solid color-mix(in srgb, var(--tile-color) 45%, transparent);
+}
+.tile-img.small { width: 36px; height: 36px; border-radius: 10px; font-size: 1.15rem; }
+.tile-name {
+  width: 100%; font-size: 0.74rem; font-weight: 600; line-height: 1.2; text-align: center;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; min-height: 2.4em;
+}
+.tile-add { border-style: dashed; color: var(--text-muted); }
+.tile-add .tile-img { background: none; border: 1px dashed var(--card-border); font-size: 1rem; }
+.picked-bar { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.7rem; padding: 0.5rem 0.7rem; border: 1px solid var(--card-border); border-radius: 12px; background: var(--panel-bg); }
+.picked-name { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 420px) { .tile-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
