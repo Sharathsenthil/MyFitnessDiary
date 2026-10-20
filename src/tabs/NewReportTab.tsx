@@ -103,9 +103,9 @@ export function NewReportTab() {
             <div className="success-banner">{showSuccess}</div>
           )}
 
-          <div className="flex gap-2 segmented" style={{ marginBottom: '1.25rem' }}>
-            <button type="button" className={`tab-btn ${mode === 'weight' ? 'active' : ''}`} onClick={() => setMode('weight')}>⚖️ Weight only</button>
-            <button type="button" className={`tab-btn ${mode === 'full' ? 'active' : ''}`} onClick={() => setMode('full')}>📋 Full report</button>
+          <div className="seg view-seg" role="tablist" aria-label="Entry type">
+            <button type="button" role="tab" aria-selected={mode === 'weight'} className={`chip ${mode === 'weight' ? 'on' : ''}`} onClick={() => setMode('weight')}>⚖️ Weight only</button>
+            <button type="button" role="tab" aria-selected={mode === 'full'} className={`chip ${mode === 'full' ? 'on' : ''}`} onClick={() => setMode('full')}>📋 Full report</button>
           </div>
 
           {mode === 'weight' && (

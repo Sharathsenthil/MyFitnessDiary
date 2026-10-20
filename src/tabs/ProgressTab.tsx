@@ -50,9 +50,9 @@ export function ProgressTab() {
   );
 
   const viewToggle = (
-    <div className="flex gap-2 segmented mb-4">
-      <button className={`tab-btn ${view === 'weight' ? 'active' : ''}`} onClick={() => setView('weight')}>⚖️ Weight only</button>
-      <button className={`tab-btn ${view === 'full' ? 'active' : ''}`} onClick={() => setView('full')}>📋 Full report</button>
+    <div className="seg view-seg" role="tablist" aria-label="Progress view">
+      <button type="button" role="tab" aria-selected={view === 'weight'} className={`chip ${view === 'weight' ? 'on' : ''}`} onClick={() => setView('weight')}>⚖️ Weight only</button>
+      <button type="button" role="tab" aria-selected={view === 'full'} className={`chip ${view === 'full' ? 'on' : ''}`} onClick={() => setView('full')}>📋 Full report</button>
     </div>
   );
 
