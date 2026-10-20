@@ -31,13 +31,18 @@ export function ProgressTab() {
   const [range, setRange] = useState<Range>('all');
 
   const sorted = useMemo(() => sortRecords(cleanRecords(stored)), [stored]);
-  const shown = range === 'all' ? sorted : sorted.slice(-Number(range));
+  // Weight & BMI are tracked on their own (every weigh-in); the other charts use full reports only
+  const reports = useMemo(() => sorted.filter(r => NUMERIC_KEYS.some(k => k !== 'weight' && k !== 'bmi' && r[k] !== undefined)), [sorted]);
+  const weighIns = useMemo(() => sorted.filter(r => r.weight !== undefined), [sorted]);
+  const lastN = (list: ReportRecord[]) => range === 'all' ? list : list.slice(-Number(range));
 
-  const data: ChartRow[] = shown.map(r => {
+  const toRows = (list: ReportRecord[]): ChartRow[] => list.map(r => {
     const row: ChartRow = { date: r.date, label: parseDateStr(r.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) };
     for (const k of NUMERIC_KEYS) row[k] = r[k] ?? null;
     return row;
   });
+  const data = toRows(lastN(reports));
+  const weightData = toRows(lastN(weighIns));
 
   const insights = useMemo(
     () => generateInsights(sorted, fitnessData.weightManagement.targetWeight),
@@ -56,7 +61,8 @@ export function ProgressTab() {
     );
   }
 
-  const valuesOf = (k: NumericKey) => data.map(d => d[k]).filter((v): v is number => v !== null && v !== undefined);
+  const isWeightKey = (k: NumericKey) => k === 'weight' || k === 'bmi';
+  const valuesOf = (k: NumericKey) => (isWeightKey(k) ? weightData : data).map(d => d[k]).filter((v): v is number => v !== null && v !== undefined);
 
   return (
     <div className="tab-content fade-in">
@@ -64,7 +70,7 @@ export function ProgressTab() {
 
       <div className="flex justify-between items-center mb-4 flex-wrap gap-2">
         <div className="flex gap-2 segmented">
-          {([['5', 'Last 5'], ['10', 'Last 10'], ['all', 'All Time']] as const).map(([v, l]) => (
+          {([['5', '5 reports'], ['10', '10 reports'], ['all', 'All Time']] as const).map(([v, l]) => (
             <button key={v} className={`tab-btn ${range === v ? 'active' : ''}`} onClick={() => setRange(v)} style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>{l}</button>
           ))}
         </div>
@@ -74,8 +80,10 @@ export function ProgressTab() {
       </div>
 
       <p className="section-note">
-        Showing {data.length} report{data.length === 1 ? '' : 's'}
-        {data.length > 0 && <> · {fmtDate(data[0].date)} → {fmtDate(data[data.length - 1].date)}</>}
+        {data.length} report{data.length === 1 ? '' : 's'}
+        {data.length > 0 && <> ({fmtDate(data[0].date)} → {fmtDate(data[data.length - 1].date)})</>}
+        {' '}· {weightData.length} weigh-in{weightData.length === 1 ? '' : 's'}
+        {weightData.length > 0 && <> ({fmtDate(weightData[0].date)} → {fmtDate(weightData[weightData.length - 1].date)})</>}
       </p>
 
       {/* Change summary */}
@@ -102,9 +110,9 @@ export function ProgressTab() {
       </div>
 
       <div className="charts-grid">
-        <ChartCard title="Weight" icon="⚖️" unit="KG" hint="Total body weight over time." data={data}
+        <ChartCard title="Weight" icon="⚖️" unit="KG" hint="Total body weight over time (every weigh-in)." data={weightData}
           series={[S('weight', 'Weight', '#f43f5e')]} />
-        <ChartCard title="BMI" icon="📉" hint="Body Mass Index — healthy range is roughly 18.5 – 24.9." data={data}
+        <ChartCard title="BMI" icon="📉" hint="Body Mass Index — healthy range is roughly 18.5 – 24.9." data={weightData}
           series={[S('bmi', 'BMI', '#ec4899')]} />
         <ChartCard title="Fat vs Muscle" icon="💪" unit="KG" hint="Goal: fat going down while muscle stays steady or rises." data={data}
           series={[S('fat', 'Fat Mass', '#f59e0b'), S('muscle', 'Muscle Mass', '#10b981'), S('smm', 'Skeletal Muscle', '#8b5cf6')]} />
@@ -126,7 +134,7 @@ export function ProgressTab() {
           series={[S('raFat', 'Right Arm', '#f43f5e'), S('laFat', 'Left Arm', '#f59e0b'), S('tFat', 'Trunk', '#10b981'), S('rlFat', 'Right Leg', '#3b82f6'), S('llFat', 'Left Leg', '#8b5cf6')]} />
       </div>
 
-      <CompareSection records={sorted} />
+      <CompareSection records={reports.length > 0 ? reports : sorted} />
     </div>
   );
 }
