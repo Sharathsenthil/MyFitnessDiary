@@ -231,9 +231,9 @@ export function WorkoutSection({ view, date, onDateChange, open, onOpenChange }:
       ) : (
         <>
           <div className="cat-row" role="tablist" aria-label="Workout categories">
-            <button type="button" role="tab" aria-selected={cat === 'recent'} className={`chip ${cat === 'recent' ? 'on' : ''}`} onClick={() => setCat('recent')}>⏱️ Recent</button>
+            <button type="button" role="tab" aria-selected={cat === 'recent'} className={`chip ${cat === 'recent' ? 'on' : ''}`} onClick={e => { setCat('recent'); e.currentTarget.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); }}>⏱️ Recent</button>
             {groupsPresent.map(g => (
-              <button key={g.id} type="button" role="tab" aria-selected={cat === g.id} className={`chip ${cat === g.id ? 'on' : ''}`} onClick={() => setCat(g.id)}>{g.emoji} {g.label}</button>
+              <button key={g.id} type="button" role="tab" aria-selected={cat === g.id} className={`chip ${cat === g.id ? 'on' : ''}`} onClick={e => { setCat(g.id); e.currentTarget.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' }); }}>{g.emoji} {g.label}</button>
             ))}
           </div>
           <div className="tile-grid" role="radiogroup" aria-label="Workouts">
